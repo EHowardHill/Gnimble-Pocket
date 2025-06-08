@@ -1,0 +1,10 @@
+{
+  "appId": "com.cinemint.gnimble",
+  "appName": "Gnimble",
+  "webDir": "dist",
+  "plugins": {
+    "SplashScreen": {
+      "launchAutoHide": false
+    }
+  }
+}
