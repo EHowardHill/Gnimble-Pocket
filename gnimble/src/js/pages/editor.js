@@ -107,8 +107,6 @@ class PageEditor extends HTMLElement {
             </div>
           </ion-header>
 
-          
-
           <ion-content>
             <div id="editor">
               <p><br /></p>
