@@ -1,7 +1,7 @@
 {
-  "name": "capacitor-app",
+  "name": "gnimble",
   "version": "1.0.0",
-  "description": "An Amazing Capacitor App",
+  "description": "Gnimble Typewriter",
   "type": "module",
   "keywords": [
     "capacitor",
@@ -13,6 +13,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@capacitor-community/electron": "^5.0.1",
     "@capacitor/android": "^7.3.0",
     "@capacitor/core": "latest",
     "@capacitor/file-transfer": "^1.0.0",
