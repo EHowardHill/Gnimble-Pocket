@@ -13,11 +13,11 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@capacitor/camera": "latest",
+    "@capacitor/android": "^7.3.0",
     "@capacitor/core": "latest",
     "@capacitor/file-transfer": "^1.0.0",
-    "@capacitor/splash-screen": "latest",
-    "@ionic/core": "^8.6.0"
+    "@capacitor/filesystem": "^7.1.1",
+    "@capacitor/splash-screen": "latest"
   },
   "devDependencies": {
     "@capacitor/cli": "latest",
