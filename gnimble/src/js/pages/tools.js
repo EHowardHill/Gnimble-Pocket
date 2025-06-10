@@ -124,29 +124,7 @@ export class ToolsPanel {
   }
 
   render() {
-    if (this.isWideLayout) {
-      this.renderWideLayout();
-    } else {
-      this.renderNarrowLayout();
-    }
-  }
-
-  renderWideLayout() {
     this.container.innerHTML = `     
-      <ion-content class="tools-content">
-        ${this.generateToolsHTML()}
-      </ion-content>
-    `;
-  }
-
-  renderNarrowLayout() {
-    this.container.innerHTML = `
-      <ion-header>
-        <ion-toolbar>
-          <ion-title>Tools</ion-title>
-        </ion-toolbar>
-      </ion-header>
-      
       <ion-content class="tools-content">
         ${this.generateToolsHTML()}
       </ion-content>

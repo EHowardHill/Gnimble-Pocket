@@ -4,10 +4,7 @@ import { NavigationPanel } from './navigation.js';
 import { EditorCore } from './editor-core.js';
 import { ToolsPanel } from './tools.js';
 import {
-  countWords,
   getStory,
-  writeStoryFile,
-  readStoryFile
 } from '../shared.js';
 
 // Global variable to track current story
@@ -28,6 +25,9 @@ class PageEditor extends HTMLElement {
   }
 
   async connectedCallback() {
+    // Show loading screen immediately
+    this.showLoadingScreen();
+
     // Get story ID from URL parameters
     const urlParams = new URLSearchParams(window.location.search);
     this.currentStoryId = urlParams.get('story');
@@ -56,188 +56,251 @@ class PageEditor extends HTMLElement {
     // Store reference for menu actions
     window.editorPageInstance = this;
 
-    // Initialize components after a short delay to ensure DOM is ready
+    // Hide loading screen and show content after 1 second
     setTimeout(() => {
+      this.hideLoadingScreen();
       this.initializeComponents();
       this.setupCrossComponentCommunication();
-    }, 100);
+      document.getElementById("btn-editor").click();
+    }, 1000);
+  }
+
+  showLoadingScreen() {
+    // Create and show loading screen
+    this.innerHTML = `
+    <div id="loading-screen" style="
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background-color: var(--ion-background-color, #ffffff);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 10000;
+      opacity: 1;
+      filter: blur(0px);
+      transition: opacity 0.8s ease-out, filter 0.8s ease-out;
+    ">
+      <img src="assets/imgs/loading-book.gif" class="img-white" alt="Loading..." style="max-width: 200px; max-height: 200px;">
+    </div>
+  `;
+  }
+
+  hideLoadingScreen() {
+    const loadingScreen = this.querySelector('#loading-screen');
+    if (loadingScreen) {
+      // Trigger the dissolve animation
+      loadingScreen.style.opacity = '0';
+      loadingScreen.style.filter = 'blur(10px)';
+
+      // Remove the element after animation completes
+      setTimeout(() => {
+        if (loadingScreen.parentNode) {
+          loadingScreen.parentNode.removeChild(loadingScreen);
+        }
+      }, 800); // Match the transition duration
+    }
   }
 
   render() {
     this.innerHTML = `
-      <!-- Shared Editor Content (persistent across layouts) -->
-      <div id="shared-editor-content" style="display: none;">
-        <ion-page id="editor-page">
+      <div id="loading-screen" style="
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background-color: black;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 10000;
+        opacity: 1;
+        filter: blur(0px);
+        transition: opacity 0.8s ease-out, filter 0.8s ease-out;
+      ">
+        <img src="assets/imgs/loading-book.gif" alt="Loading..." style="max-width: 200px; max-height: 200px;">
+      </div>
 
-          <ion-header>
-            <ion-toolbar>
-              <ion-buttons slot="start">
-                <ion-back-button default-href="/" id="back-btn"></ion-back-button>
-              </ion-buttons>
-              <div style="flex: 1;">
-                <div>
-                  <ion-select id="font-select" interface="popover" placeholder="Font" value="times" class="font-selector"
-                    fill="outline" label="Font" label-placement="stacked">
+      <div id="main-content" style="display: none;">
+        <div id="shared-editor-content" style="display: none;">
+          <ion-page id="editor-page">
 
-                    <ion-select-option value="times" class="font-option-times">
-                      Times New Roman
-                    </ion-select-option>
+            <ion-header>
+              <ion-toolbar>
+                <ion-buttons slot="start">
+                  <ion-back-button default-href="/" id="back-btn"></ion-back-button>
+                </ion-buttons>
+                <div style="flex: 1;">
+                  <div>
+                    <ion-select id="font-select" interface="popover" placeholder="Font" value="times" class="font-selector"
+                      fill="outline" label="Font" label-placement="stacked">
 
-                    <ion-select-option value="alegreya" class="font-option-alegreya">
-                      Alegreya
-                    </ion-select-option>
+                      <ion-select-option value="times" class="font-option-times">
+                        Times New Roman
+                      </ion-select-option>
 
-                    <ion-select-option value="amatic" class="font-option-amatic">
-                      Amatic SC
-                    </ion-select-option>
+                      <ion-select-option value="alegreya" class="font-option-alegreya">
+                        Alegreya
+                      </ion-select-option>
 
-                    <ion-select-option value="bree" class="font-option-bree">
-                      Bree Serif
-                    </ion-select-option>
+                      <ion-select-option value="amatic" class="font-option-amatic">
+                        Amatic SC
+                      </ion-select-option>
 
-                    <ion-select-option value="cardo" class="font-option-cardo">
-                      Cardo
-                    </ion-select-option>
+                      <ion-select-option value="bree" class="font-option-bree">
+                        Bree Serif
+                      </ion-select-option>
 
-                    <ion-select-option value="garamond" class="font-option-garamond">
-                      EB Garamond
-                    </ion-select-option>
+                      <ion-select-option value="cardo" class="font-option-cardo">
+                        Cardo
+                      </ion-select-option>
 
-                    <ion-select-option value="lora" class="font-option-lora">
-                      Lora
-                    </ion-select-option>
+                      <ion-select-option value="garamond" class="font-option-garamond">
+                        EB Garamond
+                      </ion-select-option>
 
-                    <ion-select-option value="lustria" class="font-option-lustria">
-                      Lustria
-                    </ion-select-option>
+                      <ion-select-option value="lora" class="font-option-lora">
+                        Lora
+                      </ion-select-option>
 
-                    <ion-select-option value="merriweather" class="font-option-merriweather">
-                      Merriweather
-                    </ion-select-option>
+                      <ion-select-option value="lustria" class="font-option-lustria">
+                        Lustria
+                      </ion-select-option>
 
-                    <ion-select-option value="roboto-mono" class="font-option-roboto-mono">
-                      Roboto Mono
-                    </ion-select-option>
+                      <ion-select-option value="merriweather" class="font-option-merriweather">
+                        Merriweather
+                      </ion-select-option>
 
-                    <ion-select-option value="oswald" class="font-option-oswald">
-                      Oswald
-                    </ion-select-option>
+                      <ion-select-option value="roboto-mono" class="font-option-roboto-mono">
+                        Roboto Mono
+                      </ion-select-option>
 
-                    <ion-select-option value="pacifico" class="font-option-pacifico">
-                      Pacifico
-                    </ion-select-option>
+                      <ion-select-option value="oswald" class="font-option-oswald">
+                        Oswald
+                      </ion-select-option>
 
-                    <ion-select-option value="pinyon" class="font-option-pinyon">
-                      Pinyon Script
-                    </ion-select-option>
+                      <ion-select-option value="pacifico" class="font-option-pacifico">
+                        Pacifico
+                      </ion-select-option>
 
-                    <ion-select-option value="playfair" class="font-option-playfair">
-                      Playfair Display
-                    </ion-select-option>
+                      <ion-select-option value="pinyon" class="font-option-pinyon">
+                        Pinyon Script
+                      </ion-select-option>
 
-                    <ion-select-option value="sawarabi" class="font-option-sawarabi">
-                      Sawarabi Mincho
-                    </ion-select-option>
+                      <ion-select-option value="playfair" class="font-option-playfair">
+                        Playfair Display
+                      </ion-select-option>
 
-                    <ion-select-option value="spectral" class="font-option-spectral">
-                      Spectral
-                    </ion-select-option>
+                      <ion-select-option value="sawarabi" class="font-option-sawarabi">
+                        Sawarabi Mincho
+                      </ion-select-option>
 
-                  </ion-select>
+                      <ion-select-option value="spectral" class="font-option-spectral">
+                        Spectral
+                      </ion-select-option>
+
+                    </ion-select>
+                  </div>
+                  <div style="display: flex; align-items: center; gap: 8px; flex-wrap: nowrap;">
+                    <ion-button size="small" fill="outline" id="bold-btn">
+                      <strong>B</strong>
+                    </ion-button>
+                    <ion-button size="small" fill="outline" id="italic-btn">
+                      <em>I</em>
+                    </ion-button>
+                    <ion-button size="small" fill="outline" id="underline-btn">
+                      <u>U</u>
+                    </ion-button>
+
+                  <ion-button size="small" fill="outline" id="align-left-btn">
+                    <ion-icon name="chevron-back-outline"></ion-icon>
+                  </ion-button>
+                  <ion-button size="small" fill="outline" id="align-center-btn">
+  <ion-icon name="reorder-four-outline"></ion-icon>
+                  </ion-button>
+                  <ion-button size="small" fill="outline" id="align-right-btn">
+                    <ion-icon name="chevron-forward-outline"></ion-icon>
+                  </ion-button>
+
+                    <div style="flex: 1;"> </div>
+
+                    <ion-select placeholder="Normal" id="header-select" interface="popover" value="" size="small" style="min-width: 80px; max-width: 120px;">
+                      <ion-select-option value="">Normal</ion-select-option>
+                      <ion-select-option value="1">Chapter</ion-select-option>
+                      <ion-select-option value="2">Sub-Chapter</ion-select-option>
+                    </ion-select>
+                  </div>
                 </div>
-                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: nowrap;">
-                  <ion-button size="small" fill="outline" id="bold-btn">
-                    <strong>B</strong>
-                  </ion-button>
-                  <ion-button size="small" fill="outline" id="italic-btn">
-                    <em>I</em>
-                  </ion-button>
-                  <ion-button size="small" fill="outline" id="underline-btn">
-                    <u>U</u>
-                  </ion-button>
+              </ion-toolbar>
+            </ion-header>
 
-                <ion-button size="small" fill="outline" id="align-left-btn">
-                  <ion-icon name="chevron-back-outline"></ion-icon>
-                </ion-button>
-                <ion-button size="small" fill="outline" id="align-center-btn">
-<ion-icon name="reorder-four-outline"></ion-icon>
-                </ion-button>
-                <ion-button size="small" fill="outline" id="align-right-btn">
-                  <ion-icon name="chevron-forward-outline"></ion-icon>
-                </ion-button>
-
-                  <div style="flex: 1;"> </div>
-
-                  <ion-select placeholder="Normal" id="header-select" interface="popover" value="" size="small" style="min-width: 80px; max-width: 120px;">
-                    <ion-select-option value="">Normal</ion-select-option>
-                    <ion-select-option value="1">Chapter</ion-select-option>
-                    <ion-select-option value="2">Sub-Chapter</ion-select-option>
-                  </ion-select>
+            <ion-content>
+              <div class="wallpaper">
+                <div id="editor">
+                  <p><br /></p>
                 </div>
               </div>
-            </ion-toolbar>
-          </ion-header>
+            </ion-content>
 
-          <div class="wallpaper">
-            <div id="editor">
-              <p><br /></p>
-            </div>
-          </div>
-
-        </ion-page>
-      </div>
-
-      <!-- Wide Layout (Desktop) -->
-      <div class="wide-layout" style="display: none;">
-        <div class="layout-container">
-          <div class="navigation-panel" id="wide-navigation-target">
-            <!-- Navigation component will be rendered here -->
-          </div>
-          <div class="editor-panel" id="wide-editor-target">
-            <!-- Editor content will be moved here -->
-          </div>
-          <div class="tools-panel" id="wide-tools-target">
-            <!-- Tools component will be rendered here -->
-          </div>
+          </ion-page>
         </div>
-      </div>
 
-      <!-- Narrow Layout (Mobile) -->
-      <div class="narrow-layout">
-        <ion-tabs selected-tab="editor">
-          <ion-tab tab="editor">
-            <div id="narrow-editor-target">
+        <!-- Wide Layout (Desktop) -->
+        <div class="wide-layout" style="display: none;">
+          <div class="layout-container">
+            <div class="navigation-panel" id="wide-navigation-target">
+              <!-- Navigation component will be rendered here -->
+            </div>
+            <div class="editor-panel" id="wide-editor-target">
               <!-- Editor content will be moved here -->
             </div>
-          </ion-tab>
-
-          <ion-tab tab="navigation">
-            <ion-page id="narrow-navigation-target">
-              <!-- Navigation component will be rendered here -->
-            </ion-page>
-          </ion-tab>
-
-          <ion-tab tab="tools">
-            <ion-page id="narrow-tools-target">
+            <div class="tools-panel" id="wide-tools-target">
               <!-- Tools component will be rendered here -->
-            </ion-page>
-          </ion-tab>
+            </div>
+          </div>
+        </div>
 
-          <ion-tab-bar slot="bottom">
-            <ion-tab-button tab="editor" class="tab-editor">
-              <ion-icon name="create-outline"></ion-icon>
-              <ion-label>Editor</ion-label>
-            </ion-tab-button>
-            <ion-tab-button tab="navigation" class="tab-navigation">
-              <ion-icon name="list-outline"></ion-icon>
-              <ion-label>Outline</ion-label>
-            </ion-tab-button>
-            <ion-tab-button tab="tools" class="tab-tools">
-              <ion-icon name="construct-outline"></ion-icon>
-              <ion-label>Tools</ion-label>
-            </ion-tab-button>
-          </ion-tab-bar>
-        </ion-tabs>
+        <!-- Narrow Layout (Mobile) -->
+        <div class="narrow-layout">
+          <ion-tabs selected-tab="editor">
+
+            <ion-tab tab="editor">
+              <div id="narrow-editor-target">
+                <!-- Editor content will be moved here -->
+              </div>
+            </ion-tab>
+
+            <ion-tab tab="navigation">
+              <ion-page id="narrow-navigation-target">
+                <!-- Navigation component will be rendered here -->
+              </ion-page>
+            </ion-tab>
+
+            <ion-tab tab="tools">
+              <ion-page id="narrow-tools-target">
+                <!-- Tools component will be rendered here -->
+              </ion-page>
+            </ion-tab>
+
+            <ion-tab-bar slot="bottom">
+              <ion-tab-button tab="navigation" class="tab-navigation">
+                <ion-icon name="list-outline"></ion-icon>
+                <ion-label>Outline</ion-label>
+              </ion-tab-button>
+              <ion-tab-button id="btn-editor" tab="editor" class="tab-editor">
+                <ion-icon name="create-outline"></ion-icon>
+                <ion-label>Editor</ion-label>
+              </ion-tab-button>
+              <ion-tab-button tab="tools" class="tab-tools">
+                <ion-icon name="construct-outline"></ion-icon>
+                <ion-label>Tools</ion-label>
+              </ion-tab-button>
+            </ion-tab-bar>
+          </ion-tabs>
+        </div>
       </div>
 
       <style>
@@ -631,6 +694,12 @@ class PageEditor extends HTMLElement {
   }
 
   initializeComponents() {
+    // Show main content and hide loading screen
+    const mainContent = this.querySelector('#main-content');
+    if (mainContent) {
+      mainContent.style.display = 'block';
+    }
+
     // Get appropriate containers based on current layout
     const navContainer = this.isWideLayout ?
       this.querySelector('#wide-navigation-target') :

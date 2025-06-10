@@ -29,18 +29,11 @@ export class NavigationPanel {
     // Initial update after a short delay
     setTimeout(() => {
       this.updateNavigationTree();
-    }, 200);
+      this.refresh();
+    }, 1000);
   }
 
   render() {
-    if (this.isWideLayout) {
-      this.renderWideLayout();
-    } else {
-      this.renderNarrowLayout();
-    }
-  }
-
-  renderWideLayout() {
     this.container.innerHTML = `
       <div class="navigation-content">
         <ion-header>          
@@ -61,12 +54,6 @@ export class NavigationPanel {
             </div>
             
             <div class="quick-actions">
-              <ion-button fill="clear" size="small" class="nav-collapse-btn" title="Collapse all">
-                <ion-icon name="contract-outline"></ion-icon>
-              </ion-button>
-              <ion-button fill="clear" size="small" class="nav-expand-btn" title="Expand all">
-                <ion-icon name="expand-outline"></ion-icon>
-              </ion-button>
               <ion-button fill="clear" size="small" class="nav-refresh-btn" title="Refresh">
                 <ion-icon name="refresh-outline"></ion-icon>
               </ion-button>
@@ -83,59 +70,6 @@ export class NavigationPanel {
           <div class="no-headings">No headings found. Add headings to see document structure.</div>
         </div>
       </div>
-    `;
-  }
-
-  renderNarrowLayout() {
-    this.container.innerHTML = `
-      <ion-header>
-        <ion-toolbar>
-          <ion-buttons slot="end">
-            <ion-button fill="clear" class="nav-search-btn">
-              <ion-icon name="search-outline"></ion-icon>
-            </ion-button>
-          </ion-buttons>
-        </ion-toolbar>
-        
-        <div class="stats-toolbar">
-          <div class="stats-grid">
-            <div class="stat-item">
-              <div class="stat-number nav-word-count">0</div>
-              <div class="stat-label">words</div>
-            </div>
-            <div class="stat-item">
-              <div class="stat-number nav-reading-time">0</div>
-              <div class="stat-label">min read</div>
-            </div>
-            <div class="stat-item">
-              <div class="stat-number nav-headings-count">0</div>
-              <div class="stat-label">headings</div>
-            </div>
-          </div>
-          
-          <div class="quick-actions">
-            <ion-button fill="clear" size="small" class="nav-collapse-btn" title="Collapse all">
-              <ion-icon name="contract-outline"></ion-icon>
-            </ion-button>
-            <ion-button fill="clear" size="small" class="nav-expand-btn" title="Expand all">
-              <ion-icon name="expand-outline"></ion-icon>
-            </ion-button>
-          </div>
-        </div>
-        
-        <div class="last-saved-bar nav-last-saved" style="display: none;">
-          <ion-icon name="checkmark-circle-outline"></ion-icon>
-          <span>Last saved: <span class="nav-saved-time">Never</span></span>
-        </div>
-      </ion-header>
-      
-      <ion-content>
-        <div class="navigation-content">
-          <div class="tree-container nav-tree-container">
-            <div class="no-headings">No headings found. Add headings to see document structure.</div>
-          </div>
-        </div>
-      </ion-content>
     `;
   }
 
