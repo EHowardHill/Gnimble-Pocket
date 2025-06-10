@@ -730,6 +730,21 @@ ion-popover ion-item {
   }
 }
 
-#background-content {
-  background-color: aqua !important;
+.wallpaper {
+  flex: 1;
+  --padding-start: 16px;
+  --padding-end: 16px;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  background: linear-gradient(rgba(0, 0, 0, 0.9), rgba(0, 0, 0, 0.7)), url("../assets/imgs/wallpapers/lonely_nights_by_luxjii_dab523c-fullview.jpg");
+  background-size: cover;
+  background-position: 50% 50%;
+}
+
+#editor {
+  background-color: rgba(0, 0, 0, 0.7);
+}
+
+#header-select {
+  margin-right: 32px;
 }
