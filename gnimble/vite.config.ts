@@ -7,4 +7,7 @@ export default defineConfig({
     minify: false,
     emptyOutDir: true,
   },
+  server: {
+    allowedHosts: ['gnimble.online'], // Add the host here
+  },
 });
