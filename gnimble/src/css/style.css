@@ -1,5 +1,6 @@
 /* Ensure full height for everything */
-html, body {
+html,
+body {
   height: 100%;
   margin: 0;
   padding: 0;
@@ -14,7 +15,8 @@ ion-nav {
 }
 
 /* Ensure custom page components take full height */
-page-home, page-editor {
+page-home,
+page-editor {
   display: block;
   height: 100%;
 }
@@ -43,7 +45,8 @@ ion-content {
 .ql-editor {
   min-height: 300px;
   height: 100%;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  /* UPDATED: Set Times New Roman as default instead of system fonts */
+  font-family: "Times New Roman", Times, serif;
   font-size: 16px;
   line-height: 1.6;
 }
@@ -58,7 +61,8 @@ ion-content {
   padding: 8px;
   border-bottom: 1px solid var(--ion-color-light);
   background: var(--ion-color-light-tint);
-  flex-shrink: 0; /* Prevent toolbar from shrinking */
+  flex-shrink: 0;
+  /* Prevent toolbar from shrinking */
 }
 
 .format-toolbar ion-button {
@@ -121,11 +125,607 @@ ion-footer {
   flex-shrink: 0;
 }
 
+/* REMOVED: Custom font that was conflicting with Google Fonts
 @font-face {
-    font-family: 'SortsMillGoudy'; /*a name to be used later*/
-    src: url('../assets/fonts/SortsMillGoudy-Regular.ttf'); /*URL to font*/
+  font-family: 'SortsMillGoudy';
+  src: url('../assets/fonts/SortsMillGoudy-Regular.ttf');
 }
 
 #editor {
   font-family: 'SortsMillGoudy';
+}
+*/
+
+/* Google Fonts CSS for Quill Editor */
+
+/* Font Family Definitions for Quill */
+.ql-font-times {
+  font-family: "Times New Roman", Times, serif;
+}
+
+.ql-font-alegreya {
+  font-family: "Alegreya", serif;
+}
+
+.ql-font-amatic {
+  font-family: "Amatic SC", cursive;
+}
+
+.ql-font-bree {
+  font-family: "Bree Serif", serif;
+}
+
+.ql-font-cardo {
+  font-family: "Cardo", serif;
+}
+
+.ql-font-garamond {
+  font-family: "EB Garamond", serif;
+}
+
+.ql-font-lora {
+  font-family: "Lora", serif;
+}
+
+.ql-font-lustria {
+  font-family: "Lustria", serif;
+}
+
+.ql-font-merriweather {
+  font-family: "Merriweather", serif;
+}
+
+.ql-font-roboto-mono {
+  font-family: "Roboto Mono", monospace;
+}
+
+.ql-font-oswald {
+  font-family: "Oswald", sans-serif;
+}
+
+.ql-font-pacifico {
+  font-family: "Pacifico", cursive;
+}
+
+.ql-font-pinyon {
+  font-family: "Pinyon Script", cursive;
+}
+
+.ql-font-playfair {
+  font-family: "Playfair Display", serif;
+}
+
+.ql-font-sawarabi {
+  font-family: "Sawarabi Mincho", serif;
+}
+
+.ql-font-spectral {
+  font-family: "Spectral", serif;
+}
+
+/* Apply font classes to Quill editor content */
+.ql-editor .ql-font-times {
+  font-family: "Times New Roman", Times, serif;
+}
+
+.ql-editor .ql-font-alegreya {
+  font-family: "Alegreya", serif;
+}
+
+.ql-editor .ql-font-amatic {
+  font-family: "Amatic SC", cursive;
+}
+
+.ql-editor .ql-font-bree {
+  font-family: "Bree Serif", serif;
+}
+
+.ql-editor .ql-font-cardo {
+  font-family: "Cardo", serif;
+}
+
+.ql-editor .ql-font-garamond {
+  font-family: "EB Garamond", serif;
+}
+
+.ql-editor .ql-font-lora {
+  font-family: "Lora", serif;
+}
+
+.ql-editor .ql-font-lustria {
+  font-family: "Lustria", serif;
+}
+
+.ql-editor .ql-font-merriweather {
+  font-family: "Merriweather", serif;
+}
+
+.ql-editor .ql-font-roboto-mono {
+  font-family: "Roboto Mono", monospace;
+}
+
+.ql-editor .ql-font-oswald {
+  font-family: "Oswald", sans-serif;
+}
+
+.ql-editor .ql-font-pacifico {
+  font-family: "Pacifico", cursive;
+}
+
+.ql-editor .ql-font-pinyon {
+  font-family: "Pinyon Script", cursive;
+}
+
+.ql-editor .ql-font-playfair {
+  font-family: "Playfair Display", serif;
+}
+
+.ql-editor .ql-font-sawarabi {
+  font-family: "Sawarabi Mincho", serif;
+}
+
+.ql-editor .ql-font-spectral {
+  font-family: "Spectral", serif;
+}
+
+/* Enhanced Font Dropdown Preview CSS for Ionic */
+
+/* Base font selector styling - stretch to fill remaining width */
+#font-select {
+  min-width: 180px;
+  flex: 1;
+  width: 100%;
+  max-width: none;
+  order: -1;
+  /* Always put font selector first in toolbar */
+}
+
+.font-selector {
+  --placeholder-color: #665;
+  flex: 1;
+  padding-top: 12px;
+  padding-right: 12px;
+}
+
+/* Style the selected value to show current font */
+.font-selector .select-text {
+  font-weight: 500;
+  transition: font-family 0.2s ease;
+}
+
+/* Individual font option styling for dropdown */
+ion-select-option[value="times"],
+.font-option-times {
+  font-family: "Times New Roman", Times, serif !important;
+  font-size: 16px !important;
+}
+
+ion-select-option[value="alegreya"],
+.font-option-alegreya {
+  font-family: "Alegreya", serif !important;
+  font-size: 16px !important;
+}
+
+ion-select-option[value="amatic"],
+.font-option-amatic {
+  font-family: "Amatic SC", cursive !important;
+  font-size: 20px !important;
+  font-weight: 400 !important;
+}
+
+ion-select-option[value="bree"],
+.font-option-bree {
+  font-family: "Bree Serif", serif !important;
+  font-size: 16px !important;
+}
+
+ion-select-option[value="cardo"],
+.font-option-cardo {
+  font-family: "Cardo", serif !important;
+  font-size: 16px !important;
+}
+
+ion-select-option[value="garamond"],
+.font-option-garamond {
+  font-family: "EB Garamond", serif !important;
+  font-size: 16px !important;
+}
+
+ion-select-option[value="lora"],
+.font-option-lora {
+  font-family: "Lora", serif !important;
+  font-size: 16px !important;
+}
+
+ion-select-option[value="lustria"],
+.font-option-lustria {
+  font-family: "Lustria", serif !important;
+  font-size: 16px !important;
+}
+
+ion-select-option[value="merriweather"],
+.font-option-merriweather {
+  font-family: "Merriweather", serif !important;
+  font-size: 16px !important;
+}
+
+ion-select-option[value="roboto-mono"],
+.font-option-roboto-mono {
+  font-family: "Roboto Mono", monospace !important;
+  font-size: 14px !important;
+}
+
+ion-select-option[value="oswald"],
+.font-option-oswald {
+  font-family: "Oswald", sans-serif !important;
+  font-size: 16px !important;
+  font-weight: 400 !important;
+}
+
+ion-select-option[value="pacifico"],
+.font-option-pacifico {
+  font-family: "Pacifico", cursive !important;
+  font-size: 18px !important;
+}
+
+ion-select-option[value="pinyon"],
+.font-option-pinyon {
+  font-family: "Pinyon Script", cursive !important;
+  font-size: 20px !important;
+}
+
+ion-select-option[value="playfair"],
+.font-option-playfair {
+  font-family: "Playfair Display", serif !important;
+  font-size: 16px !important;
+}
+
+ion-select-option[value="sawarabi"],
+.font-option-sawarabi {
+  font-family: "Sawarabi Mincho", serif !important;
+  font-size: 16px !important;
+}
+
+ion-select-option[value="spectral"],
+.font-option-spectral {
+  font-family: "Spectral", serif !important;
+  font-size: 16px !important;
+}
+
+/* Target Ionic popover content specifically */
+ion-popover {
+  --max-width: 300px;
+}
+
+ion-popover ion-content {
+  --padding-start: 0;
+  --padding-end: 0;
+}
+
+/* Style the individual radio buttons in the popover */
+ion-popover ion-radio-group ion-item {
+  --padding-start: 16px;
+  --padding-end: 16px;
+  --min-height: 48px;
+}
+
+/* Font-specific styling for popover items */
+ion-popover ion-item[button] ion-label[slot="start"] {
+  transition: font-family 0.2s ease;
+}
+
+/* Apply fonts to popover items by targeting the label text */
+ion-popover ion-item[value="times"] ion-label,
+ion-popover ion-item[aria-label*="Times"] ion-label {
+  font-family: "Times New Roman", Times, serif !important;
+  font-size: 16px !important;
+}
+
+ion-popover ion-item[value="alegreya"] ion-label,
+ion-popover ion-item[aria-label*="Alegreya"] ion-label {
+  font-family: "Alegreya", serif !important;
+  font-size: 16px !important;
+}
+
+ion-popover ion-item[value="amatic"] ion-label,
+ion-popover ion-item[aria-label*="Amatic"] ion-label {
+  font-family: "Amatic SC", cursive !important;
+  font-size: 20px !important;
+  font-weight: 400 !important;
+}
+
+ion-popover ion-item[value="bree"] ion-label,
+ion-popover ion-item[aria-label*="Bree"] ion-label {
+  font-family: "Bree Serif", serif !important;
+  font-size: 16px !important;
+}
+
+ion-popover ion-item[value="cardo"] ion-label,
+ion-popover ion-item[aria-label*="Cardo"] ion-label {
+  font-family: "Cardo", serif !important;
+  font-size: 16px !important;
+}
+
+ion-popover ion-item[value="garamond"] ion-label,
+ion-popover ion-item[aria-label*="Garamond"] ion-label {
+  font-family: "EB Garamond", serif !important;
+  font-size: 16px !important;
+}
+
+ion-popover ion-item[value="lora"] ion-label,
+ion-popover ion-item[aria-label*="Lora"] ion-label {
+  font-family: "Lora", serif !important;
+  font-size: 16px !important;
+}
+
+ion-popover ion-item[value="lustria"] ion-label,
+ion-popover ion-item[aria-label*="Lustria"] ion-label {
+  font-family: "Lustria", serif !important;
+  font-size: 16px !important;
+}
+
+ion-popover ion-item[value="merriweather"] ion-label,
+ion-popover ion-item[aria-label*="Merriweather"] ion-label {
+  font-family: "Merriweather", serif !important;
+  font-size: 16px !important;
+}
+
+ion-popover ion-item[value="roboto-mono"] ion-label,
+ion-popover ion-item[aria-label*="Roboto"] ion-label {
+  font-family: "Roboto Mono", monospace !important;
+  font-size: 14px !important;
+}
+
+ion-popover ion-item[value="oswald"] ion-label,
+ion-popover ion-item[aria-label*="Oswald"] ion-label {
+  font-family: "Oswald", sans-serif !important;
+  font-size: 16px !important;
+  font-weight: 400 !important;
+}
+
+ion-popover ion-item[value="pacifico"] ion-label,
+ion-popover ion-item[aria-label*="Pacifico"] ion-label {
+  font-family: "Pacifico", cursive !important;
+  font-size: 18px !important;
+}
+
+ion-popover ion-item[value="pinyon"] ion-label,
+ion-popover ion-item[aria-label*="Pinyon"] ion-label {
+  font-family: "Pinyon Script", cursive !important;
+  font-size: 20px !important;
+}
+
+ion-popover ion-item[value="playfair"] ion-label,
+ion-popover ion-item[aria-label*="Playfair"] ion-label {
+  font-family: "Playfair Display", serif !important;
+  font-size: 16px !important;
+}
+
+ion-popover ion-item[value="sawarabi"] ion-label,
+ion-popover ion-item[aria-label*="Sawarabi"] ion-label {
+  font-family: "Sawarabi Mincho", serif !important;
+  font-size: 16px !important;
+}
+
+ion-popover ion-item[value="spectral"] ion-label,
+ion-popover ion-item[aria-label*="Spectral"] ion-label {
+  font-family: "Spectral", serif !important;
+  font-size: 16px !important;
+}
+
+/* Alternative targeting for more specific Ionic structure */
+.select-interface-popover ion-item {
+  --color: inherit;
+}
+
+.select-interface-popover ion-item ion-label {
+  white-space: normal;
+  line-height: 1.4;
+  padding: 8px 0;
+}
+
+/* Ensure proper spacing for different font sizes */
+ion-popover ion-item {
+  --min-height: auto;
+  min-height: 48px;
+}
+
+/* Custom class targeting for when Ionic structure varies */
+.font-preview-times {
+  font-family: "Times New Roman", Times, serif !important;
+}
+
+.font-preview-alegreya {
+  font-family: "Alegreya", serif !important;
+}
+
+.font-preview-amatic {
+  font-family: "Amatic SC", cursive !important;
+  font-size: 20px !important;
+}
+
+.font-preview-bree {
+  font-family: "Bree Serif", serif !important;
+}
+
+.font-preview-cardo {
+  font-family: "Cardo", serif !important;
+}
+
+.font-preview-garamond {
+  font-family: "EB Garamond", serif !important;
+}
+
+.font-preview-lora {
+  font-family: "Lora", serif !important;
+}
+
+.font-preview-lustria {
+  font-family: "Lustria", serif !important;
+}
+
+.font-preview-merriweather {
+  font-family: "Merriweather", serif !important;
+}
+
+.font-preview-roboto-mono {
+  font-family: "Roboto Mono", monospace !important;
+  font-size: 14px !important;
+}
+
+.font-preview-oswald {
+  font-family: "Oswald", sans-serif !important;
+}
+
+.font-preview-pacifico {
+  font-family: "Pacifico", cursive !important;
+  font-size: 18px !important;
+}
+
+.font-preview-pinyon {
+  font-family: "Pinyon Script", cursive !important;
+  font-size: 20px !important;
+}
+
+.font-preview-playfair {
+  font-family: "Playfair Display", serif !important;
+}
+
+.font-preview-sawarabi {
+  font-family: "Sawarabi Mincho", serif !important;
+}
+
+.font-preview-spectral {
+  font-family: "Spectral", serif !important;
+}
+
+/* Toolbar layout enhancements for font selector stretching */
+.format-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  border-bottom: 1px solid var(--ion-color-light);
+  background: var(--ion-color-light-tint);
+  flex-shrink: 0;
+}
+
+.format-toolbar>* {
+  flex-shrink: 0;
+}
+
+.format-toolbar #font-select,
+.format-toolbar .font-selector {
+  flex: 1;
+  flex-shrink: 1;
+  order: -1;
+  /* Always first */
+}
+
+/* Ensure other toolbar items don't grow */
+.format-toolbar ion-button {
+  flex: none;
+}
+
+.format-toolbar ion-select:not(#font-select):not(.font-selector) {
+  flex: none;
+  max-width: 120px;
+}
+
+/* Alternative toolbar class if you're using different naming */
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  border-bottom: 1px solid #e0e0e0;
+  background: #f8f9fa;
+}
+
+.toolbar>* {
+  flex-shrink: 0;
+}
+
+.toolbar #font-select,
+.toolbar .font-selector {
+  flex: 1;
+  flex-shrink: 1;
+  min-width: 0;
+  /* Allow shrinking below min-content */
+  order: -1;
+  /* Always first */
+}
+
+.toolbar ion-button {
+  flex: none;
+}
+
+.toolbar ion-select:not(#font-select):not(.font-selector) {
+  flex: none;
+  max-width: 120px;
+}
+
+/* Responsive adjustments for smaller screens */
+@media (max-width: 768px) {
+
+  .toolbar,
+  .format-toolbar {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  #font-select,
+  .font-selector {
+    min-width: 140px;
+    order: -1;
+    /* Always put font selector first */
+  }
+
+  .toolbar ion-button,
+  .format-toolbar ion-button {
+    min-width: 40px;
+  }
+
+  .toolbar ion-select:not(#font-select):not(.font-selector),
+  .format-toolbar ion-select:not(#font-select):not(.font-selector) {
+    min-width: 100px;
+    max-width: 110px;
+  }
+}
+
+/* Smaller screens - keep font selector first but more compact */
+@media (max-width: 480px) {
+
+  .toolbar,
+  .format-toolbar {
+    padding: 6px;
+    gap: 3px;
+  }
+
+  #font-select,
+  .font-selector {
+    min-width: 120px;
+    order: -1;
+    /* Always first */
+    flex: 1;
+    /* Take available space but not full width */
+  }
+
+  /* Compact buttons for very small screens */
+  .toolbar ion-button,
+  .format-toolbar ion-button {
+    --padding-start: 4px;
+    --padding-end: 4px;
+    min-width: 36px;
+    height: 36px;
+    margin: 1px;
+  }
+
+  /* Header selector more compact */
+  .toolbar ion-select:not(#font-select):not(.font-selector),
+  .format-toolbar ion-select:not(#font-select):not(.font-selector) {
+    min-width: 70px;
+    max-width: 100px;
+    font-size: 14px;
+  }
 }
