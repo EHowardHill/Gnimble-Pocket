@@ -193,10 +193,11 @@ class ColorUtils {
     static loadSavedDarkMode() {
         try {
             const savedDarkMode = localStorage.getItem('gnimble-dark-mode');
-            const isDarkMode = savedDarkMode === 'true';
+            const isDarkMode = savedDarkMode !== 'false';
             this.applyDarkModeToCSS(isDarkMode);
             return isDarkMode;
         } catch (error) {
+            this.saveDarkMode(true);
             console.error('Error loading saved dark mode:', error);
             return false;
         }
