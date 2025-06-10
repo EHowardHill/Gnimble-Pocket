@@ -178,7 +178,7 @@ class PageEditor extends HTMLElement {
             </ion-toolbar>
           </ion-header>
 
-          <ion-content>
+          <ion-content class="wallpaper">
             <div id="editor">
               <p><br /></p>
             </div>
