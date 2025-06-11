@@ -16,6 +16,7 @@ export class ToolsPanel {
     this.clickTimeout = null;
     this.focusKeyHandler = null;
     this.storedSelection = null;
+    this.orientationChangeHandler = null; // Add orientation change handler
   }
 
   initialize(container, isWideLayout) {
@@ -24,8 +25,45 @@ export class ToolsPanel {
     this.initializeDefaultTools();
     this.addActiveToolStyles();
     this.setupFocusModeKeyboardShortcut();
+    this.setupOrientationListener(); // Add orientation listener setup
     this.render();
     this.setupEventListeners();
+  }
+
+  // Add method to check if device is in portrait mode
+  isPortraitMode() {
+    return window.matchMedia("(orientation: portrait)").matches;
+  }
+
+  // Add method to setup orientation change listener
+  setupOrientationListener() {
+    if (this.orientationChangeHandler) {
+      // Remove existing listener if any
+      window.removeEventListener('orientationchange', this.orientationChangeHandler);
+      window.removeEventListener('resize', this.orientationChangeHandler);
+    }
+
+    this.orientationChangeHandler = () => {
+      // Small delay to ensure orientation change is complete
+      setTimeout(() => {
+        this.render(); // Re-render tools when orientation changes
+      }, 100);
+    };
+
+    // Listen for both orientationchange and resize events
+    window.addEventListener('orientationchange', this.orientationChangeHandler);
+    window.addEventListener('resize', this.orientationChangeHandler);
+  }
+
+  // Modify getVisibleTools method to filter tools based on orientation
+  getVisibleTools() {
+    return this.tools.filter(tool => {
+      // Hide Focus Mode in portrait mode
+      if (tool.id === 'focus-mode' && this.isPortraitMode()) {
+        return false;
+      }
+      return true;
+    });
   }
 
   addActiveToolStyles() {
@@ -132,7 +170,10 @@ export class ToolsPanel {
   }
 
   generateToolsHTML() {
-    if (this.tools.length === 0) {
+    // Use visible tools instead of all tools
+    const visibleTools = this.getVisibleTools();
+    
+    if (visibleTools.length === 0) {
       return `
         <div style="text-align: center; padding: 40px 20px; color: var(--ion-color-medium);">
           <ion-icon name="construct-outline" size="large" style="margin-bottom: 16px; opacity: 0.6;"></ion-icon>
@@ -141,8 +182,8 @@ export class ToolsPanel {
       `;
     }
 
-    // Group tools by category
-    const categories = this.groupToolsByCategory();
+    // Group visible tools by category
+    const categories = this.groupToolsByCategory(visibleTools);
 
     let html = '';
 
@@ -178,12 +219,11 @@ export class ToolsPanel {
     `;
   }
 
-
-
-  groupToolsByCategory() {
+  // Modify groupToolsByCategory to accept tools parameter
+  groupToolsByCategory(tools = this.tools) {
     const categories = {};
 
-    this.tools.forEach(tool => {
+    tools.forEach(tool => {
       const category = tool.category || 'general';
       if (!categories[category]) {
         categories[category] = [];
@@ -226,6 +266,13 @@ export class ToolsPanel {
   activateTool(toolId) {
     const tool = this.tools.find(t => t.id === toolId);
     if (!tool) return;
+
+    // Check if focus mode is being activated in portrait mode
+    if (toolId === 'focus-mode' && this.isPortraitMode()) {
+      this.showToast('Focus Mode is not available in portrait mode');
+      this.clearActiveTool();
+      return;
+    }
 
     console.log('Activating tool:', tool.name);
 
@@ -354,6 +401,13 @@ export class ToolsPanel {
   }
 
   toggleFocusMode() {
+    // Additional check to prevent focus mode in portrait
+    if (this.isPortraitMode()) {
+      this.showToast('Focus Mode is not available in portrait mode');
+      this.clearActiveTool();
+      return;
+    }
+
     document.body.classList.toggle('focus-mode');
     const isActive = document.body.classList.contains('focus-mode');
 
@@ -896,33 +950,6 @@ export class ToolsPanel {
     URL.revokeObjectURL(url);
   }
 
-  printDocument() {
-    if (!window.quill) return;
-
-    const content = window.quill.root.innerHTML;
-    const title = this.editor.getStory()?.title || 'Document';
-
-    const printWindow = window.open('', '_blank');
-    printWindow.document.write(`
-      <html>
-        <head>
-          <title>${title}</title>
-          <style>
-            body { font-family: 'Times New Roman', serif; font-size: 12pt; line-height: 1.5; margin: 1in; }
-            h1 { font-size: 18pt; margin-bottom: 12pt; }
-            h2 { font-size: 16pt; margin-bottom: 10pt; }
-            p { margin-bottom: 12pt; }
-          </style>
-        </head>
-        <body>
-          ${content}
-        </body>
-      </html>
-    `);
-    printWindow.document.close();
-    printWindow.print();
-  }
-
   findText(searchTerm) {
     this.container.dispatchEvent(new CustomEvent('search-document', {
       bubbles: true,
@@ -1104,6 +1131,17 @@ export class ToolsPanel {
     this.isWideLayout = isWideLayout;
     this.render();
     this.setupEventListeners();
+  }
+
+  // Cleanup method to remove event listeners
+  destroy() {
+    if (this.orientationChangeHandler) {
+      window.removeEventListener('orientationchange', this.orientationChangeHandler);
+      window.removeEventListener('resize', this.orientationChangeHandler);
+    }
+    if (this.focusKeyHandler) {
+      document.removeEventListener('keydown', this.focusKeyHandler);
+    }
   }
 
   // Helper methods for handling Quill focus conflicts with modals

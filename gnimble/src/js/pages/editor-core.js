@@ -12,13 +12,19 @@ export class EditorCore {
 
   async initialize(container) {
     this.container = container;
-    
+
     // Wait for layout to be set up
     await new Promise(resolve => setTimeout(resolve, 300));
-    
+
     await this.setupEditor();
     this.setupToolbar();
     this.setupBackButton();
+  }
+
+  isMobileDevice() {
+    // Check if we're on mobile/tablet or in portrait mode
+    return window.matchMedia("(orientation: portrait)").matches ||
+      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
   }
 
   async setupEditor() {
@@ -37,9 +43,9 @@ export class EditorCore {
     // Configure Google Fonts for Quill
     const Font = Quill.import('formats/font');
     Font.whitelist = [
-      'times', 'alegreya', 'amatic', 'bree', 'cardo', 
-      'garamond', 'lora', 'lustria', 'merriweather', 
-      'roboto-mono', 'oswald', 'pacifico', 'pinyon', 
+      'times', 'alegreya', 'amatic', 'bree', 'cardo',
+      'garamond', 'lora', 'lustria', 'merriweather',
+      'roboto-mono', 'oswald', 'pacifico', 'pinyon',
       'playfair', 'sawarabi', 'spectral'
     ];
     Quill.register(Font, true);
@@ -203,7 +209,7 @@ export class EditorCore {
     if (this.toolbarButtons.fontSelect) {
       const currentFont = format.font || 'times';
       this.toolbarButtons.fontSelect.value = currentFont;
-      
+
       // Update the font selector's own display font to match selection
       this.updateFontSelectorDisplay(currentFont);
     }
@@ -234,7 +240,7 @@ export class EditorCore {
     // Apply the font family to the selector itself
     const fontFamily = fontMap[fontValue] || fontMap['times'];
     this.toolbarButtons.fontSelect.style.fontFamily = fontFamily;
-    
+
     // Adjust font size for decorative fonts
     if (['amatic', 'pacifico', 'pinyon'].includes(fontValue)) {
       this.toolbarButtons.fontSelect.style.fontSize = '18px';
@@ -268,7 +274,7 @@ export class EditorCore {
       this.editor.story = await this.editor.getStory();
 
       console.log('Content saved for story:', storyId);
-      this.emitContentSaved();
+      //this.emitContentSaved();
       return true;
     } catch (error) {
       console.error('Error saving story:', error);
@@ -324,7 +330,7 @@ export class EditorCore {
       // Select the found text
       this.quill.setSelection(index, searchTerm.length);
       this.quill.focus();
-      
+
       // Show success message
       this.showToast(`Found "${searchTerm}"`);
 
@@ -460,7 +466,7 @@ export class EditorCore {
   // Method to insert text at current cursor position
   insertText(text) {
     if (!this.quill) return;
-    
+
     const selection = this.quill.getSelection();
     if (selection) {
       this.quill.insertText(selection.index, text);
@@ -472,17 +478,17 @@ export class EditorCore {
   // Method to insert formatted text
   insertFormattedText(text, format = {}) {
     if (!this.quill) return;
-    
+
     const selection = this.quill.getSelection();
     const index = selection ? selection.index : 0;
-    
+
     this.quill.insertText(index, text, format);
   }
 
   // Method to apply formatting to selected text
   formatSelection(format) {
     if (!this.quill) return;
-    
+
     const selection = this.quill.getSelection();
     if (selection && selection.length > 0) {
       this.quill.formatText(selection.index, selection.length, format);
@@ -492,7 +498,7 @@ export class EditorCore {
   // Method to clear all formatting from selection
   clearFormatting() {
     if (!this.quill) return;
-    
+
     const selection = this.quill.getSelection();
     if (selection && selection.length > 0) {
       // Clear all formats by applying them as false
@@ -511,7 +517,7 @@ export class EditorCore {
   // Method to append content to the document
   appendContent(html) {
     if (!this.quill) return;
-    
+
     const currentLength = this.quill.getLength();
     this.quill.clipboard.dangerouslyPasteHTML(currentLength - 1, html);
   }
@@ -533,15 +539,15 @@ export class EditorCore {
       this.quill.off('selection-change');
       this.quill.off('text-change');
       this.quill.off('editor-change');
-      
+
       // Clear global reference
       if (window.quill === this.quill) {
         window.quill = null;
       }
-      
+
       this.quill = null;
     }
-    
+
     this.toolbarButtons = {};
     this.container = null;
   }
@@ -552,7 +558,7 @@ export class EditorCore {
 
     const html = this.quill.root.innerHTML;
     const text = this.quill.getText();
-    
+
     return {
       words: countWords(html),
       characters: text.length,

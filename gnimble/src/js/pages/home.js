@@ -35,8 +35,8 @@ class PageHome extends HTMLElement {
           </ion-toolbar>
         </ion-header>
 
-        <ion-content class="ion-padding">
-          <div class="wallpaper" id="stories-container">
+        <ion-content class="wallpaper ion-padding">
+          <div class="wallpaper wallpaper-override" id="stories-container">
             <ion-text color="medium" class="ion-text-center">
               <p>Loading stories...</p>
             </ion-text>
@@ -45,7 +45,7 @@ class PageHome extends HTMLElement {
         
         <ion-footer>
           <ion-toolbar>
-            <ion-title size="small">Version 2.0.0</ion-title>
+            <ion-title size="small">Version 2.0.1</ion-title>
           </ion-toolbar>
         </ion-footer>
       </ion-page>

@@ -141,7 +141,8 @@
       function applyDarkMode() {
         try {
           const savedDarkMode = localStorage.getItem('gnimble-dark-mode');
-          const isDarkMode = savedDarkMode === 'true';
+          // If not set in localStorage, default to dark mode (true)
+          const isDarkMode = savedDarkMode === null ? false : savedDarkMode === 'true';
 
           if (isDarkMode) {
             document.documentElement.classList.add('ion-palette-dark');
@@ -263,7 +264,7 @@
         setInterval(function () {
           const currentColor = getComputedStyle(document.documentElement).getPropertyValue('--ion-color-primary').trim();
           const currentDarkMode = document.documentElement.classList.contains('ion-palette-dark');
-          const savedDarkModeSetting = localStorage.getItem('gnimble-dark-mode') === 'true';
+          const savedDarkModeSetting = localStorage.getItem('gnimble-dark-mode');
 
           if ((savedColor && currentColor !== savedColor) || (currentDarkMode !== savedDarkModeSetting)) {
             console.log('Theme drift detected, reapplying');

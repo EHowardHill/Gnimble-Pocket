@@ -63,6 +63,10 @@ class PageEditor extends HTMLElement {
       this.setupCrossComponentCommunication();
       document.getElementById("btn-editor").click();
     }, 1000);
+
+    setInterval(() => {
+      this.saveDocument();
+    }, 1000 * 30);
   }
 
   showLoadingScreen() {
@@ -133,9 +137,9 @@ class PageEditor extends HTMLElement {
                 <ion-buttons slot="start">
                   <ion-back-button default-href="/" id="back-btn"></ion-back-button>
                 </ion-buttons>
-                <div style="flex: 1;">
-                  <div>
-                    <ion-select id="font-select" interface="popover" placeholder="Font" value="times" class="font-selector"
+                <div style="flex: 1; padding: 16px; padding-bottom: 0px;">
+                  <div style="display: flex; flex-wrap: wrap; align-items: center;">
+                    <ion-select style="flex: 1;" id="font-select" interface="popover" placeholder="Font" value="times" class="font-selector"
                       fill="outline" label="Font" label-placement="stacked">
 
                       <ion-select-option value="times" class="font-option-times">
@@ -204,30 +208,36 @@ class PageEditor extends HTMLElement {
 
                     </ion-select>
                   </div>
-                  <div style="display: flex; align-items: center; gap: 8px; flex-wrap: nowrap;">
-                    <ion-button size="small" fill="outline" id="bold-btn">
-                      <strong>B</strong>
-                    </ion-button>
-                    <ion-button size="small" fill="outline" id="italic-btn">
-                      <em>I</em>
-                    </ion-button>
-                    <ion-button size="small" fill="outline" id="underline-btn">
-                      <u>U</u>
-                    </ion-button>
+                  <div style="display: flex; flex-wrap: wrap; width: 100%; align-items: center;">
+                    <div>
+                      <ion-button size="small" fill="outline" id="bold-btn">
+                        <strong>B</strong>
+                      </ion-button>
+                      <ion-button size="small" fill="outline" id="italic-btn">
+                        <em>I</em>
+                      </ion-button>
+                      <ion-button size="small" fill="outline" id="underline-btn">
+                        <u>U</u>
+                      </ion-button>
+                    </div>
 
-                  <ion-button size="small" fill="outline" id="align-left-btn">
-                    <ion-icon name="chevron-back-outline"></ion-icon>
-                  </ion-button>
-                  <ion-button size="small" fill="outline" id="align-center-btn">
-  <ion-icon name="reorder-four-outline"></ion-icon>
-                  </ion-button>
-                  <ion-button size="small" fill="outline" id="align-right-btn">
-                    <ion-icon name="chevron-forward-outline"></ion-icon>
-                  </ion-button>
+                    <div style="flex: 1;">
+                    </div>
 
-                    <div style="flex: 1;"> </div>
-
-                    <ion-select placeholder="Normal" id="header-select" interface="popover" value="" size="small" style="min-width: 80px; max-width: 120px;">
+                    <div>
+                      <ion-button size="small" fill="outline" id="align-left-btn">
+                        <ion-icon name="chevron-back-outline"></ion-icon>
+                      </ion-button>
+                      <ion-button size="small" fill="outline" id="align-center-btn">
+                        <ion-icon name="reorder-four-outline"></ion-icon>
+                      </ion-button>
+                      <ion-button size="small" fill="outline" id="align-right-btn">
+                        <ion-icon name="chevron-forward-outline"></ion-icon>
+                      </ion-button>
+                    </div>
+                  </div>
+                  <div>
+                  <ion-select placeholder="Normal" id="header-select" interface="popover" value="">
                       <ion-select-option value="">Normal</ion-select-option>
                       <ion-select-option value="1">Chapter</ion-select-option>
                       <ion-select-option value="2">Sub-Chapter</ion-select-option>
@@ -576,15 +586,6 @@ class PageEditor extends HTMLElement {
           font-family: Tahoma, sans-serif;
         }
 
-        #editor {
-          min-height: 300px;
-          padding: 16px;
-          max-width: 100vh; /* Never wider than viewport height (1:1 aspect ratio) */
-          width: 100%;
-          margin: 0 auto; /* Center horizontally */
-          box-sizing: border-box;
-        }
-
         /* Ensure Quill editor content is visible */
         .ql-container {
           font-size: 16px;
@@ -622,16 +623,14 @@ class PageEditor extends HTMLElement {
         }
 
         /* Responsive breakpoint */
-        @media (min-width: 768px) {
-          .narrow-layout {
-            display: none !important;
-          }
-          .wide-layout {
-            display: block !important;
-          }
+        .narrow-layout {
+          display: none !important;
+        }
+        .wide-layout {
+          display: block !important;
         }
 
-        @media (max-width: 767px) {
+        @media screen and (orientation: portrait) {
           .wide-layout {
             display: none !important;
           }
@@ -662,7 +661,7 @@ class PageEditor extends HTMLElement {
   }
 
   checkLayoutSize() {
-    this.isWideLayout = window.innerWidth >= 768;
+    this.isWideLayout = !window.matchMedia("(orientation: portrait)").matches;
   }
 
   moveEditorToCurrentLayout() {
@@ -774,6 +773,7 @@ class PageEditor extends HTMLElement {
       this.editorCore.searchInDocument(e.detail.searchTerm);
     });
   }
+
 
   async saveDocument() {
     const success = await this.editorCore.saveContent();

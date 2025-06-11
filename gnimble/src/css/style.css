@@ -4,6 +4,7 @@ body {
   height: 100%;
   margin: 0;
   padding: 0;
+  transition: 0.5s ease-in-out;
 }
 
 ion-app {
@@ -43,7 +44,6 @@ ion-content {
 
 /* Ensure editor has proper spacing and takes available height */
 .ql-editor {
-  min-height: 300px;
   height: 100%;
   /* UPDATED: Set Times New Roman as default instead of system fonts */
   font-family: "Times New Roman", Times, serif;
@@ -124,19 +124,6 @@ ion-content {
 ion-footer {
   flex-shrink: 0;
 }
-
-/* REMOVED: Custom font that was conflicting with Google Fonts
-@font-face {
-  font-family: 'SortsMillGoudy';
-  src: url('../assets/fonts/SortsMillGoudy-Regular.ttf');
-}
-
-#editor {
-  font-family: 'SortsMillGoudy';
-}
-*/
-
-/* Google Fonts CSS for Quill Editor */
 
 /* Font Family Definitions for Quill */
 .ql-font-times {
@@ -268,23 +255,9 @@ ion-footer {
   font-family: "Spectral", serif;
 }
 
-/* Enhanced Font Dropdown Preview CSS for Ionic */
-
-/* Base font selector styling - stretch to fill remaining width */
-#font-select {
-  min-width: 180px;
-  flex: 1;
-  width: 100%;
-  max-width: none;
-  order: -1;
-  /* Always put font selector first in toolbar */
-}
-
 .font-selector {
   --placeholder-color: #665;
   flex: 1;
-  padding-top: 12px;
-  padding-right: 12px;
 }
 
 /* Style the selected value to show current font */
@@ -618,8 +591,6 @@ ion-popover ion-item {
 .format-toolbar .font-selector {
   flex: 1;
   flex-shrink: 1;
-  order: -1;
-  /* Always first */
 }
 
 /* Ensure other toolbar items don't grow */
@@ -651,9 +622,6 @@ ion-popover ion-item {
   flex: 1;
   flex-shrink: 1;
   min-width: 0;
-  /* Allow shrinking below min-content */
-  order: -1;
-  /* Always first */
 }
 
 .toolbar ion-button {
@@ -664,72 +632,6 @@ ion-popover ion-item {
   flex: none;
   max-width: 120px;
 }
-
-/* Responsive adjustments for smaller screens */
-@media (max-width: 768px) {
-
-  .toolbar,
-  .format-toolbar {
-    flex-wrap: wrap;
-    gap: 4px;
-  }
-
-  #font-select,
-  .font-selector {
-    min-width: 140px;
-    order: -1;
-    /* Always put font selector first */
-  }
-
-  .toolbar ion-button,
-  .format-toolbar ion-button {
-    min-width: 40px;
-  }
-
-  .toolbar ion-select:not(#font-select):not(.font-selector),
-  .format-toolbar ion-select:not(#font-select):not(.font-selector) {
-    min-width: 100px;
-    max-width: 110px;
-  }
-}
-
-/* Smaller screens - keep font selector first but more compact */
-@media (max-width: 480px) {
-
-  .toolbar,
-  .format-toolbar {
-    padding: 6px;
-    gap: 3px;
-  }
-
-  #font-select,
-  .font-selector {
-    min-width: 120px;
-    order: -1;
-    /* Always first */
-    flex: 1;
-    /* Take available space but not full width */
-  }
-
-  /* Compact buttons for very small screens */
-  .toolbar ion-button,
-  .format-toolbar ion-button {
-    --padding-start: 4px;
-    --padding-end: 4px;
-    min-width: 36px;
-    height: 36px;
-    margin: 1px;
-  }
-
-  /* Header selector more compact */
-  .toolbar ion-select:not(#font-select):not(.font-selector),
-  .format-toolbar ion-select:not(#font-select):not(.font-selector) {
-    min-width: 70px;
-    max-width: 100px;
-    font-size: 14px;
-  }
-}
-
 
 /* Add CSS custom properties at the top of your styles.css */
 :root {
@@ -757,24 +659,46 @@ ion-popover ion-item {
   width: 100%;
 }
 
+@media screen and (orientation: portrait) {
+  .wallpaper {
+    --padding-start: 0px;
+    --padding-end: 0px;
+    padding-top: 0px;
+    padding-bottom: 0px;
+  }
+
+  .wallpaper-override {
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+}
+
 #editor {
   background-color: rgba(255, 255, 255, 0.85);
   backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px); /* Safari support */
-  box-shadow: 
+  -webkit-backdrop-filter: blur(8px);
+  /* Safari support */
+  box-shadow:
     0 8px 32px rgba(0, 0, 0, 0.1),
     0 4px 16px rgba(0, 0, 0, 0.05),
     inset 0 1px 0 rgba(255, 255, 255, 0.3);
   border: 1px solid rgba(255, 255, 255, 0.2);
   transition: all 0.3s ease;
+
+  padding: 16px;
+  max-width: 63vh;
+  width: 100%;
+  margin: 0 auto; /* Center horizontally */
+  box-sizing: border-box;
 }
 
 /* Dark mode editor - darker background with dark shadow */
 .ion-palette-dark #editor {
   background-color: rgba(0, 0, 0, 0.75);
   backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px); /* Safari support */
-  box-shadow: 
+  -webkit-backdrop-filter: blur(8px);
+  /* Safari support */
+  box-shadow:
     0 8px 32px rgba(0, 0, 0, 0.6),
     0 4px 16px rgba(0, 0, 0, 0.4),
     inset 0 1px 0 rgba(255, 255, 255, 0.1);
@@ -787,7 +711,7 @@ ion-popover ion-item {
 }
 
 .ion-palette-dark #editor:hover {
-  box-shadow: 
+  box-shadow:
     0 12px 40px rgba(0, 0, 0, 0.7),
     0 6px 20px rgba(0, 0, 0, 0.5),
     inset 0 1px 0 rgba(255, 255, 255, 0.15);
@@ -795,7 +719,7 @@ ion-popover ion-item {
 
 /* Light mode hover */
 :not(.ion-palette-dark) #editor:hover {
-  box-shadow: 
+  box-shadow:
     0 12px 40px rgba(0, 0, 0, 0.15),
     0 6px 20px rgba(0, 0, 0, 0.08),
     inset 0 1px 0 rgba(255, 255, 255, 0.4);
