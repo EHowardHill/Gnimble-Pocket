@@ -41,6 +41,263 @@ const formatDate = (timestamp) => {
   }
 };
 
+// Authentication utility functions
+const isAuthenticated = () => {
+  const token = localStorage.getItem('gnimble-auth-token');
+  const username = localStorage.getItem('gnimble-username');
+  return token && username;
+};
+
+const getAuthToken = () => {
+  return localStorage.getItem('gnimble-auth-token');
+};
+
+const getUsername = () => {
+  return localStorage.getItem('gnimble-username');
+};
+
+const getUserData = () => {
+  const userData = localStorage.getItem('gnimble-user-data');
+  return userData ? JSON.parse(userData) : null;
+};
+
+const saveUserData = (userData) => {
+  localStorage.setItem('gnimble-user-data', JSON.stringify(userData));
+};
+
+const clearAuthData = () => {
+  localStorage.removeItem('gnimble-auth-token');
+  localStorage.removeItem('gnimble-username');
+  localStorage.removeItem('gnimble-user-data');
+};
+
+const makeApiCall = async (endpoint, data, requireAuth = false) => {
+  const headers = {
+    'Content-Type': 'application/json',
+  };
+
+  if (requireAuth) {
+    const token = getAuthToken();
+    if (!token) {
+      throw new Error('No authentication token found');
+    }
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  const response = await fetch(`https://gnimble.online${endpoint}`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}`);
+  }
+
+  return await response.json();
+};
+
+const fetchUserProfile = async () => {
+  const username = getUsername();
+  if (!username) {
+    throw new Error('No username found');
+  }
+
+  try {
+    const userData = await makeApiCall('/api/user', { user: username });
+    saveUserData(userData);
+    return userData;
+  } catch (error) {
+    console.error('Error fetching user profile:', error);
+    throw error;
+  }
+};
+
+const requireAuth = () => {
+  if (!isAuthenticated()) {
+    window.location.href = '/login';
+    return false;
+  }
+  return true;
+};
+
+// Optional auth check that doesn't redirect - for pages where login is optional
+const checkAuth = () => {
+  return isAuthenticated();
+};
+
+// Cloud story synchronization functions
+const loadStoryFromCloud = async (storyName) => {
+  if (!isAuthenticated()) {
+    throw new Error('Authentication required for cloud operations');
+  }
+
+  try {
+    const response = await makeApiCall('/api/story/get/', {
+      story: storyName
+    }, true); // requireAuth = true
+
+    if (response.success === 1) {
+      return response.data;
+    } else {
+      throw new Error('Failed to load story from cloud');
+    }
+  } catch (error) {
+    console.error('Error loading story from cloud:', error);
+    throw error;
+  }
+};
+
+const saveStoryToCloud = async (storyName, data) => {
+  if (!isAuthenticated()) {
+    console.log('Not authenticated, skipping cloud save');
+    return false;
+  }
+
+  try {
+    const response = await makeApiCall('/api/story/set/', {
+      story: storyName,
+      data: data
+    }, true); // requireAuth = true
+
+    if (response.success === 1) {
+      console.log(`Story "${storyName}" saved to cloud successfully`);
+      return true;
+    } else {
+      throw new Error('Failed to save story to cloud');
+    }
+  } catch (error) {
+    console.error('Error saving story to cloud:', error);
+    throw error;
+  }
+};
+
+// Sync a local story to the cloud
+const syncStoryToCloud = async (storyId) => {
+  if (!isAuthenticated()) {
+    console.log('Not authenticated, skipping cloud sync');
+    return false;
+  }
+
+  try {
+    const story = await getStory(storyId);
+    if (!story) {
+      throw new Error('Story not found locally');
+    }
+
+    const content = await readStoryFile(storyId);
+    const storyData = {
+      title: story.title,
+      content: content,
+      wordCount: story.wordCount,
+      lastModified: story.lastModified,
+      created: story.created
+    };
+
+    await saveStoryToCloud(story.title, storyData);
+    return true;
+  } catch (error) {
+    console.error('Error syncing story to cloud:', error);
+    throw error;
+  }
+};
+
+// Import a story from the cloud to local storage
+const syncStoryFromCloud = async (storyName) => {
+  if (!isAuthenticated()) {
+    throw new Error('Authentication required for cloud operations');
+  }
+
+  try {
+    const cloudStoryData = await loadStoryFromCloud(storyName);
+    
+    // Check if story already exists locally
+    const stories = await loadStoriesIndex();
+    let existingStory = stories.find(s => s.title === storyName);
+    
+    if (existingStory) {
+      // Update existing story
+      existingStory.title = cloudStoryData.title || storyName;
+      existingStory.wordCount = cloudStoryData.wordCount || 0;
+      existingStory.lastModified = cloudStoryData.lastModified || Date.now();
+      existingStory.created = cloudStoryData.created || existingStory.created;
+      
+      await saveStoriesIndex(stories);
+      await writeStoryFile(existingStory.id, cloudStoryData.content || '<p><br /></p>');
+      
+      return existingStory;
+    } else {
+      // Create new story
+      const newStory = {
+        id: generateId(),
+        title: cloudStoryData.title || storyName,
+        filename: `story-${generateId()}.html`,
+        wordCount: cloudStoryData.wordCount || 0,
+        lastModified: cloudStoryData.lastModified || Date.now(),
+        created: cloudStoryData.created || Date.now()
+      };
+
+      stories.push(newStory);
+      await saveStoriesIndex(stories);
+      await writeStoryFile(newStory.id, cloudStoryData.content || '<p><br /></p>');
+      
+      return newStory;
+    }
+  } catch (error) {
+    console.error('Error syncing story from cloud:', error);
+    throw error;
+  }
+};
+
+// Sync all local stories to cloud
+const syncAllStoriesToCloud = async () => {
+  if (!isAuthenticated()) {
+    console.log('Not authenticated, skipping cloud sync');
+    return { success: 0, synced: 0, errors: [] };
+  }
+
+  const stories = await loadStoriesIndex();
+  const results = {
+    success: 0,
+    synced: 0,
+    errors: []
+  };
+
+  for (const story of stories) {
+    try {
+      await syncStoryToCloud(story.id);
+      results.synced++;
+    } catch (error) {
+      results.errors.push({
+        storyId: story.id,
+        title: story.title,
+        error: error.message
+      });
+    }
+  }
+
+  results.success = results.errors.length === 0 ? 1 : 0;
+  return results;
+};
+
+// Enhanced writeStoryFile that also syncs to cloud
+const writeStoryFileWithSync = async (storyId, content) => {
+  // First, write locally
+  const result = await writeStoryFile(storyId, content);
+  
+  // Then try to sync to cloud if authenticated
+  if (isAuthenticated()) {
+    try {
+      await syncStoryToCloud(storyId);
+    } catch (error) {
+      console.warn('Failed to sync story to cloud, but local save was successful:', error);
+      // Don't throw error - local save was successful
+    }
+  }
+  
+  return result;
+};
+
 // Load stories index
 const loadStoriesIndex = async () => {
   try {
@@ -205,5 +462,23 @@ export {
   getStory,
   updateStoryMetadata,
   writeStoryFile,
-  readStoryFile
+  readStoryFile,
+  // Authentication functions
+  isAuthenticated,
+  getAuthToken,
+  getUsername,
+  getUserData,
+  saveUserData,
+  clearAuthData,
+  makeApiCall,
+  fetchUserProfile,
+  requireAuth,
+  checkAuth,
+  // Cloud synchronization functions
+  loadStoryFromCloud,
+  saveStoryToCloud,
+  syncStoryToCloud,
+  syncStoryFromCloud,
+  syncAllStoriesToCloud,
+  writeStoryFileWithSync
 };

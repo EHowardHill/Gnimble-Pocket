@@ -25,6 +25,12 @@ class PageHome extends HTMLElement {
               <img class="img-white" width="128px" src="assets/imgs/gnimble-logo.png"></img>
             </ion-title>
             <ion-buttons slot="end">
+              <ion-button fill="clear" id="profile-btn" title="Profile">
+                <div id="profile-avatar">
+                  <ion-icon name="person-outline" id="default-profile-icon"></ion-icon>
+                  <img id="profile-image" style="width: 32px; height: 32px; display: none;" />
+                </div>
+              </ion-button>
               <ion-button fill="clear" id="settings-btn" title="Settings">
                 <ion-icon name="settings-outline"></ion-icon>
               </ion-button>
@@ -45,7 +51,7 @@ class PageHome extends HTMLElement {
         
         <ion-footer>
           <ion-toolbar>
-            <ion-title size="small">Version 2.0.1</ion-title>
+            <ion-title size="small">Version 2.0.2</ion-title>
           </ion-toolbar>
         </ion-footer>
       </ion-page>
@@ -62,10 +68,16 @@ class PageHome extends HTMLElement {
 
   setupEventListeners() {
     const addBtn = this.querySelector('#add-story-btn');
+    const profileBtn = this.querySelector('#profile-btn');
     const settingsBtn = this.querySelector('#settings-btn');
 
     addBtn.addEventListener('click', () => this.showCreateStoryModal());
+    profileBtn.addEventListener('click', () => this.navigateToLogin());
     settingsBtn.addEventListener('click', () => this.navigateToSettings());
+  }
+
+  navigateToLogin() {
+    window.location.href = '/login';
   }
 
   navigateToSettings() {

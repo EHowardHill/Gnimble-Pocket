@@ -8,3 +8,4 @@ import './shared.js';
 import './pages/home.js';
 import './pages/main-editor.js';
 import './pages/settings.js';
+import './pages/login.js';
