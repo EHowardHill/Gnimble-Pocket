@@ -1,6 +1,5 @@
 // shared.js
 
-import { FileTransfer } from '@capacitor/file-transfer';
 import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
 import { defineCustomElements } from '@ionic/pwa-elements/loader';
 
@@ -210,21 +209,21 @@ const syncStoryFromCloud = async (storyName) => {
 
   try {
     const cloudStoryData = await loadStoryFromCloud(storyName);
-    
+
     // Check if story already exists locally
     const stories = await loadStoriesIndex();
     let existingStory = stories.find(s => s.title === storyName);
-    
+
     if (existingStory) {
       // Update existing story
       existingStory.title = cloudStoryData.title || storyName;
       existingStory.wordCount = cloudStoryData.wordCount || 0;
       existingStory.lastModified = cloudStoryData.lastModified || Date.now();
       existingStory.created = cloudStoryData.created || existingStory.created;
-      
+
       await saveStoriesIndex(stories);
       await writeStoryFile(existingStory.id, cloudStoryData.content || '<p><br /></p>');
-      
+
       return existingStory;
     } else {
       // Create new story
@@ -240,7 +239,7 @@ const syncStoryFromCloud = async (storyName) => {
       stories.push(newStory);
       await saveStoriesIndex(stories);
       await writeStoryFile(newStory.id, cloudStoryData.content || '<p><br /></p>');
-      
+
       return newStory;
     }
   } catch (error) {
@@ -284,7 +283,7 @@ const syncAllStoriesToCloud = async () => {
 const writeStoryFileWithSync = async (storyId, content) => {
   // First, write locally
   const result = await writeStoryFile(storyId, content);
-  
+
   // Then try to sync to cloud if authenticated
   if (isAuthenticated()) {
     try {
@@ -294,7 +293,7 @@ const writeStoryFileWithSync = async (storyId, content) => {
       // Don't throw error - local save was successful
     }
   }
-  
+
   return result;
 };
 
@@ -328,7 +327,7 @@ const saveStoriesIndex = async (stories) => {
   }
 };
 
-// Create a new story
+// Enhanced createStory that also creates in cloud when authenticated
 const createStory = async (title) => {
   const stories = await loadStoriesIndex();
   const newStory = {
@@ -344,7 +343,7 @@ const createStory = async (title) => {
   stories.push(newStory);
   await saveStoriesIndex(stories);
 
-  // Then create empty story file
+  // Create empty story file (this will auto-sync to cloud if authenticated)
   await writeStoryFile(newStory.id, '<p><br /></p>');
 
   return newStory;
@@ -394,7 +393,7 @@ const getStory = async (storyId) => {
   return stories.find(s => s.id === storyId);
 };
 
-// Update story metadata (word count, last modified)
+// Enhanced updateStoryMetadata to sync metadata changes to cloud
 const updateStoryMetadata = async (storyId, content) => {
   const stories = await loadStoriesIndex();
   const story = stories.find(s => s.id === storyId);
@@ -405,15 +404,23 @@ const updateStoryMetadata = async (storyId, content) => {
   story.lastModified = Date.now();
 
   await saveStoriesIndex(stories);
+
+  // Note: Cloud sync happens in writeStoryFile, not here
+  // This prevents duplicate syncs
+
   return story;
 };
 
-// File operations for stories
-const writeStoryFile = async (storyId, content) => {
+// Enhanced writeStoryFile that automatically syncs to cloud when authenticated
+const writeStoryFile = async (storyId, content, options = {}) => {
   const story = await getStory(storyId);
   if (!story) throw new Error('Story not found');
 
+  // Default options
+  const { skipCloudSync = false } = options;
+
   try {
+    // Step 1: Always save locally first
     await Filesystem.writeFile({
       path: `stories/${story.filename}`,
       data: content,
@@ -421,8 +428,30 @@ const writeStoryFile = async (storyId, content) => {
       encoding: Encoding.UTF8,
     });
 
-    // Update metadata
+    // Step 2: Update metadata locally
     await updateStoryMetadata(storyId, content);
+
+    // Step 3: Sync to cloud if authenticated and not skipped
+    if (isAuthenticated() && !skipCloudSync) {
+      try {
+        console.log(`Syncing story "${story.title}" to cloud...`);
+
+        const storyData = {
+          title: story.title,
+          content: content,
+          wordCount: countWords(content),
+          lastModified: Date.now(),
+          created: story.created
+        };
+
+        await saveStoryToCloud(story.title, storyData);
+        console.log(`Story "${story.title}" synced to cloud successfully`);
+      } catch (cloudError) {
+        console.warn('Failed to sync story to cloud, but local save was successful:', cloudError);
+        // Optionally, you could track failed syncs for retry later
+        // await markStoryForSync(storyId);
+      }
+    }
 
     return true;
   } catch (error) {
@@ -481,4 +510,66 @@ export {
   syncStoryFromCloud,
   syncAllStoriesToCloud,
   writeStoryFileWithSync
+};
+
+// Optional: Add a function to manually trigger cloud sync for a story
+const manualSyncToCloud = async (storyId) => {
+  if (!isAuthenticated()) {
+    throw new Error('Authentication required for cloud sync');
+  }
+
+  try {
+    const content = await readStoryFile(storyId);
+    const story = await getStory(storyId);
+
+    const storyData = {
+      title: story.title,
+      content: content,
+      wordCount: story.wordCount,
+      lastModified: story.lastModified,
+      created: story.created
+    };
+
+    await saveStoryToCloud(story.title, storyData);
+    return true;
+  } catch (error) {
+    console.error('Error manually syncing story to cloud:', error);
+    throw error;
+  }
+};
+
+// Optional: Add a sync status tracker
+const syncStatusTracker = {
+  pendingSyncs: new Set(),
+
+  markForSync(storyId) {
+    this.pendingSyncs.add(storyId);
+  },
+
+  markSynced(storyId) {
+    this.pendingSyncs.delete(storyId);
+  },
+
+  getPendingSyncs() {
+    return Array.from(this.pendingSyncs);
+  },
+
+  async syncPending() {
+    if (!isAuthenticated()) return;
+
+    const pending = this.getPendingSyncs();
+    const results = [];
+
+    for (const storyId of pending) {
+      try {
+        await manualSyncToCloud(storyId);
+        this.markSynced(storyId);
+        results.push({ storyId, success: true });
+      } catch (error) {
+        results.push({ storyId, success: false, error: error.message });
+      }
+    }
+
+    return results;
+  }
 };

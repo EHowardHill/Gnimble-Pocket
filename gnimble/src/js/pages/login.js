@@ -14,9 +14,282 @@ class PageLogin extends HTMLElement {
   constructor() {
     super();
     this.isLoading = false;
+    this.isAuthenticated = false;
+    this.userProfile = null;
   }
 
   async connectedCallback() {
+    // Check authentication status first
+    await this.checkExistingAuth();
+    
+    // Render appropriate view based on auth status
+    if (this.isAuthenticated) {
+      this.renderProfileView();
+    } else {
+      this.renderLoginView();
+    }
+
+    this.setupEventListeners();
+    this.loadSavedPrimaryColor();
+  }
+
+  async checkExistingAuth() {
+    if (isAuthenticated()) {
+      // Verify token is still valid by making a test API call
+      try {
+        const username = getUsername();
+        if (username) {
+          const userData = await fetchUserProfile();
+          if (userData) {
+            // Token is valid, set authenticated state
+            this.isAuthenticated = true;
+            this.userProfile = userData;
+            return;
+          }
+        }
+      } catch (error) {
+        // Token is invalid, clear it
+        clearAuthData();
+        this.isAuthenticated = false;
+        this.userProfile = null;
+      }
+    }
+    this.isAuthenticated = false;
+    this.userProfile = null;
+  }
+
+  renderProfileView() {
+    const username = getUsername();
+    const profile = this.userProfile || {};
+    const storyCount = profile.stories ? profile.stories.length : 0;
+    
+    this.innerHTML = `
+      <ion-page>
+        <ion-header>
+          <ion-toolbar>
+            <ion-buttons slot="start">
+              <ion-button fill="clear" id="back-btn">
+                <ion-icon name="arrow-back-outline"></ion-icon>
+              </ion-button>
+            </ion-buttons>
+            <ion-title>Profile</ion-title>
+          </ion-toolbar>
+        </ion-header>
+
+        <ion-content class="wallpaper ion-padding">
+          <div class="profile-container">
+            <div class="ion-text-center ion-margin-bottom">
+              <h2>Welcome back!</h2>
+              <p color="medium">You're signed into Gnimble Cloud</p>
+            </div>
+
+            <ion-card>
+              <ion-card-content>
+                <div class="profile-info">
+                  <div class="avatar-section">
+                    ${profile.avatar_url ? 
+                      `<img src="${profile.avatar_url}" alt="Profile Avatar" class="profile-avatar">` : 
+                      `<div class="profile-avatar-placeholder">
+                        <ion-icon name="person-outline"></ion-icon>
+                      </div>`
+                    }
+                  </div>
+                  
+                  <div class="profile-details">
+                    <h3>${profile.name || username}</h3>
+                    <p class="username">@${username}</p>
+                    
+                    <div class="stats">
+                      <div class="stat-item">
+                        <ion-icon name="document-text-outline"></ion-icon>
+                        <span>${storyCount} ${storyCount === 1 ? 'story' : 'stories'}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                ${storyCount > 0 ? `
+                  <div class="stories-preview">
+                    <h4>Your Stories</h4>
+                    <div class="story-list">
+                      ${profile.stories.slice(0, 3).map(story => `
+                        <div class="story-item">
+                          <ion-icon name="document-outline"></ion-icon>
+                          <span>${story}</span>
+                        </div>
+                      `).join('')}
+                      ${storyCount > 3 ? `
+                        <div class="story-item more-stories">
+                          <ion-icon name="ellipsis-horizontal-outline"></ion-icon>
+                          <span>and ${storyCount - 3} more</span>
+                        </div>
+                      ` : ''}
+                    </div>
+                  </div>
+                ` : ''}
+
+                <div class="profile-actions">
+                  <ion-button 
+                    expand="block" 
+                    fill="outline" 
+                    id="home-btn"
+                    class="ion-margin-top"
+                  >
+                    <ion-icon name="home-outline" slot="start"></ion-icon>
+                    Go to Home
+                  </ion-button>
+                  
+                  <ion-button 
+                    expand="block" 
+                    fill="clear" 
+                    color="danger"
+                    id="signout-btn"
+                    class="ion-margin-top"
+                  >
+                    <ion-icon name="log-out-outline" slot="start"></ion-icon>
+                    Sign Out
+                  </ion-button>
+                </div>
+              </ion-card-content>
+            </ion-card>
+          </div>
+        </ion-content>
+        
+        <ion-footer>
+          <ion-toolbar>
+            <ion-title size="small">Version 2.0.1</ion-title>
+          </ion-toolbar>
+        </ion-footer>
+      </ion-page>
+
+      <style>
+        .profile-container {
+          max-width: 400px;
+          margin: 0 auto;
+          padding-top: 2rem;
+        }
+        
+        ion-card {
+          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+        }
+        
+        .profile-info {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          text-align: center;
+          margin-bottom: 1.5rem;
+        }
+        
+        .avatar-section {
+          margin-bottom: 1rem;
+        }
+        
+        .profile-avatar {
+          width: 80px;
+          height: 80px;
+          border-radius: 50%;
+          object-fit: cover;
+          border: 3px solid var(--ion-color-primary);
+        }
+        
+        .profile-avatar-placeholder {
+          width: 80px;
+          height: 80px;
+          border-radius: 50%;
+          background: var(--ion-color-light);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border: 3px solid var(--ion-color-primary);
+        }
+        
+        .profile-avatar-placeholder ion-icon {
+          font-size: 2.5rem;
+          color: var(--ion-color-medium);
+        }
+        
+        .profile-details h3 {
+          margin: 0 0 0.25rem 0;
+          font-size: 1.5rem;
+          font-weight: 600;
+        }
+        
+        .username {
+          color: var(--ion-color-medium);
+          margin: 0 0 1rem 0;
+          font-size: 0.9rem;
+        }
+        
+        .stats {
+          display: flex;
+          justify-content: center;
+          gap: 1rem;
+        }
+        
+        .stat-item {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          color: var(--ion-color-medium);
+          font-size: 0.9rem;
+        }
+        
+        .stat-item ion-icon {
+          font-size: 1.1rem;
+        }
+        
+        .stories-preview {
+          border-top: 1px solid var(--ion-color-light);
+          padding-top: 1rem;
+          margin-top: 1rem;
+        }
+        
+        .stories-preview h4 {
+          margin: 0 0 0.75rem 0;
+          font-size: 1.1rem;
+          font-weight: 600;
+          color: var(--ion-color-dark);
+        }
+        
+        .story-list {
+          display: flex;
+          flex-direction: column;
+          gap: 0.5rem;
+        }
+        
+        .story-item {
+          display: flex;
+          align-items: center;
+          gap: 0.75rem;
+          padding: 0.5rem;
+          background: var(--ion-color-light);
+          border-radius: 8px;
+          font-size: 0.9rem;
+        }
+        
+        .story-item ion-icon {
+          color: var(--ion-color-primary);
+          font-size: 1.1rem;
+          flex-shrink: 0;
+        }
+        
+        .story-item.more-stories {
+          background: var(--ion-color-light-shade);
+          color: var(--ion-color-medium);
+          font-style: italic;
+        }
+        
+        .profile-actions {
+          border-top: 1px solid var(--ion-color-light);
+          padding-top: 1rem;
+          margin-top: 1rem;
+        }
+      </style>
+    `;
+  }
+
+  renderLoginView() {
     this.innerHTML = `
       <ion-page>
         <ion-header>
@@ -120,66 +393,76 @@ class PageLogin extends HTMLElement {
         }
       </style>
     `;
-
-    this.setupEventListeners();
-
-    // Check if user is already logged in
-    await this.checkExistingAuth();
-
-    // Load saved primary color if it exists
-    this.loadSavedPrimaryColor();
   }
 
   setupEventListeners() {
-    const loginForm = this.querySelector('#login-form');
-    const forgotPasswordBtn = this.querySelector('#forgot-password-btn');
-    const signupBtn = this.querySelector('#signup-btn');
     const backBtn = this.querySelector('#back-btn');
-
-    if (loginForm) {
-      loginForm.addEventListener('submit', (e) => this.handleLogin(e));
-    }
     
-    if (forgotPasswordBtn) {
-      forgotPasswordBtn.addEventListener('click', () => this.handleForgotPassword());
-    }
-    
-    if (signupBtn) {
-      signupBtn.addEventListener('click', () => this.handleSignup());
-    }
-
     if (backBtn) {
       backBtn.addEventListener('click', () => this.handleBack());
     }
 
-    // Enable form submission on Enter key
-    const inputs = this.querySelectorAll('ion-input');
-    inputs.forEach(input => {
-      input.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' && !this.isLoading) {
-          this.handleLogin(e);
-        }
+    if (this.isAuthenticated) {
+      // Profile view event listeners
+      const signoutBtn = this.querySelector('#signout-btn');
+      const homeBtn = this.querySelector('#home-btn');
+      
+      if (signoutBtn) {
+        signoutBtn.addEventListener('click', () => this.handleSignOut());
+      }
+      
+      if (homeBtn) {
+        homeBtn.addEventListener('click', () => this.navigateToHome());
+      }
+    } else {
+      // Login view event listeners
+      const loginForm = this.querySelector('#login-form');
+      const forgotPasswordBtn = this.querySelector('#forgot-password-btn');
+      const signupBtn = this.querySelector('#signup-btn');
+
+      if (loginForm) {
+        loginForm.addEventListener('submit', (e) => this.handleLogin(e));
+      }
+      
+      if (forgotPasswordBtn) {
+        forgotPasswordBtn.addEventListener('click', () => this.handleForgotPassword());
+      }
+      
+      if (signupBtn) {
+        signupBtn.addEventListener('click', () => this.handleSignup());
+      }
+
+      // Enable form submission on Enter key
+      const inputs = this.querySelectorAll('ion-input');
+      inputs.forEach(input => {
+        input.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' && !this.isLoading) {
+            this.handleLogin(e);
+          }
+        });
       });
-    });
+    }
   }
 
-  async checkExistingAuth() {
-    if (isAuthenticated()) {
-      // Verify token is still valid by making a test API call
-      try {
-        const username = getUsername();
-        if (username) {
-          const userData = await fetchUserProfile();
-          if (userData) {
-            // Token is valid, redirect to home
-            this.navigateToHome();
-            return;
-          }
-        }
-      } catch (error) {
-        // Token is invalid, clear it
-        clearAuthData();
-      }
+  async handleSignOut() {
+    try {
+      // Clear all authentication data
+      clearAuthData();
+      
+      // Show success message
+      await this.showToast('Signed out successfully');
+      
+      // Reset component state
+      this.isAuthenticated = false;
+      this.userProfile = null;
+      
+      // Re-render the login view
+      this.renderLoginView();
+      this.setupEventListeners();
+      
+    } catch (error) {
+      console.error('Error during sign out:', error);
+      await this.showToast('Error signing out');
     }
   }
 
@@ -232,12 +515,18 @@ class PageLogin extends HTMLElement {
         try {
           const userData = await fetchUserProfile();
           saveUserData(userData);
+          this.userProfile = userData;
         } catch (error) {
           console.warn('Could not fetch user profile, but login was successful:', error);
         }
         
         await this.showToast('Login successful!');
-        this.navigateToHome();
+        
+        // Update component state and re-render
+        this.isAuthenticated = true;
+        this.renderProfileView();
+        this.setupEventListeners();
+        
       } else {
         // Login failed
         this.showError('Invalid username or password');
