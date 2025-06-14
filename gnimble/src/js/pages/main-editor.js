@@ -1,5 +1,6 @@
 // main-editor.js
 
+import { Keyboard } from '@capacitor/keyboard';
 import { NavigationPanel } from './navigation.js';
 import { EditorCore } from './editor-core.js';
 import { ToolsPanel } from './tools.js';
@@ -139,8 +140,8 @@ class PageEditor extends HTMLElement {
                 </ion-buttons>
                 <div style="flex: 1; padding: 16px; padding-bottom: 0px;">
                   <div style="display: flex; flex-wrap: wrap; align-items: center;">
-                    <ion-select style="flex: 1;" id="font-select" interface="popover" placeholder="Font" value="times" class="font-selector"
-                      fill="outline" label="Font" label-placement="stacked">
+                    <ion-select style="flex: 1;" id="font-select" interface="popover" placeholder="Font" value="times"
+                      class="font-selector" fill="outline" label="Font" label-placement="stacked">
 
                       <ion-select-option value="times" class="font-option-times">
                         Times New Roman
@@ -236,12 +237,16 @@ class PageEditor extends HTMLElement {
                       </ion-button>
                     </div>
                   </div>
-                  <div>
-                  <ion-select placeholder="Normal" id="header-select" interface="popover" value="">
+                  <div style="display: flex;">
+                    <ion-select placeholder="Normal" id="header-select" interface="popover" value="">
                       <ion-select-option value="">Normal</ion-select-option>
                       <ion-select-option value="1">Chapter</ion-select-option>
                       <ion-select-option value="2">Sub-Chapter</ion-select-option>
                     </ion-select>
+                    <div style="flex: 1;"> </div>
+                    <ion-button size="small" fill="outline" id="hide-keyboard-btn">
+                      ⌨️
+                    </ion-button>
                   </div>
                 </div>
               </ion-toolbar>
@@ -692,7 +697,7 @@ class PageEditor extends HTMLElement {
     }
   }
 
-  initializeComponents() {
+  async initializeComponents() {
     // Show main content and hide loading screen
     const mainContent = this.querySelector('#main-content');
     if (mainContent) {
@@ -728,6 +733,32 @@ class PageEditor extends HTMLElement {
     if (backBtn) {
       backBtn.addEventListener('click', () => {
         this.saveDocument();
+      });
+    }
+
+    // Setup keyboard deselector
+    const hideKeyboardBtn = this.querySelector('#hide-keyboard-btn');
+    if (hideKeyboardBtn) {
+      hideKeyboardBtn.addEventListener('click', async () => {
+        console.log("Keyboard hide cued")
+
+        // 1. If the button itself got focus, blur it immediately
+        hideKeyboardBtn.blur();
+
+        // 2. Blur whatever is currently focused in the document
+        if (document.activeElement instanceof HTMLElement) {
+          document.activeElement.blur();
+        }
+
+        // 3. Tell Quill to drop its selection and blur its editor root
+        const quill = this.editorCore.quill;
+        quill.setSelection(null);
+        quill.root.blur();
+
+        // 4. If you’re running inside Capacitor, hide the native keyboard
+        if (Keyboard && Keyboard.hide) {
+          await Keyboard.hide();
+        }
       });
     }
   }

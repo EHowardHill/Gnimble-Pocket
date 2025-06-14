@@ -23,7 +23,7 @@ class PageHome extends HTMLElement {
 
   async connectedCallback() {
     const isUserAuthenticated = isAuthenticated();
-    
+
     this.innerHTML = `
       <ion-page>
         <ion-header>
@@ -69,7 +69,7 @@ class PageHome extends HTMLElement {
         
         <ion-footer>
           <ion-toolbar>
-            <ion-title size="small">Version 2.0.2</ion-title>
+            <ion-title size="small">Version 2.0.3</ion-title>
           </ion-toolbar>
         </ion-footer>
       </ion-page>
@@ -117,12 +117,12 @@ class PageHome extends HTMLElement {
     `;
 
     this.setupEventListeners();
-    
+
     // First sync cloud stories if authenticated
     if (isUserAuthenticated) {
       await this.syncCloudStories();
     }
-    
+
     await this.loadStories();
     await this.checkSyncStatuses();
 
@@ -140,7 +140,7 @@ class PageHome extends HTMLElement {
       // First try the list endpoint if it exists
       try {
         const response = await makeApiCall('/api/story/list/', {}, true);
-        
+
         if (response.success === 1 && response.data) {
           // The API returns an object with story names as keys
           // Convert to array of story names
@@ -149,19 +149,19 @@ class PageHome extends HTMLElement {
       } catch (listError) {
         console.log('List endpoint not available, trying user data approach...');
       }
-      
+
       // Alternative: Get user data which might include story list
-      const userData = await makeApiCall('/api/user', { 
-        user: getUsername() 
+      const userData = await makeApiCall('/api/user', {
+        user: getUsername()
       });
-      
+
       if (userData && userData.stories) {
         // Assuming user data includes a stories array or object
-        return Array.isArray(userData.stories) 
-          ? userData.stories 
+        return Array.isArray(userData.stories)
+          ? userData.stories
           : Object.keys(userData.stories);
       }
-      
+
       return [];
     } catch (error) {
       console.error('Error fetching cloud stories:', error);
@@ -176,7 +176,7 @@ class PageHome extends HTMLElement {
     }
 
     const progressIndicator = this.querySelector('#cloud-sync-progress');
-    
+
     try {
       // Show progress indicator
       if (progressIndicator) {
@@ -194,7 +194,7 @@ class PageHome extends HTMLElement {
       const localStoryTitles = new Set(localStories.map(s => s.title.toLowerCase()));
 
       // Find stories that exist in cloud but not locally (case-insensitive comparison)
-      const missingStories = cloudStoryNames.filter(cloudName => 
+      const missingStories = cloudStoryNames.filter(cloudName =>
         !localStoryTitles.has(cloudName.toLowerCase())
       );
 
@@ -250,12 +250,12 @@ class PageHome extends HTMLElement {
 
         // Try to load from cloud
         const cloudData = await loadStoryFromCloud(story.title);
-        
+
         if (cloudData && cloudData.lastModified !== undefined) {
           // Compare timestamps to determine sync status
           const cloudTime = new Date(cloudData.lastModified).getTime();
           const localTime = new Date(story.lastModified).getTime();
-          
+
           if (Math.abs(cloudTime - localTime) < 1000) {
             // Timestamps are within 1 second - consider them synced
             this.syncStatuses.set(story.id, 'synced');
@@ -274,7 +274,7 @@ class PageHome extends HTMLElement {
         console.error(`Error checking sync status for story ${story.id}:`, error);
         this.syncStatuses.set(story.id, 'error');
       }
-      
+
       // Update the icon for this specific story
       this.updateStorySyncIcon(story.id, this.syncStatuses.get(story.id));
     });
@@ -349,7 +349,7 @@ class PageHome extends HTMLElement {
     container.innerHTML = sortedStories.map(story => {
       const syncStatus = this.syncStatuses.get(story.id) || 'offline';
       const { icon, className, title } = this.getSyncIconDetails(syncStatus);
-      
+
       return `
         <ion-card button onclick="window.location.href='/editor?story=${story.id}'">
           <ion-card-header>
@@ -395,12 +395,18 @@ class PageHome extends HTMLElement {
     ];
 
     // Add sync option if authenticated and not synced
-    if (isAuthenticated() && syncStatus === 'not-synced') {
-      buttons.push({
-        text: 'Sync Story',
-        icon: 'sync-outline',
-        handler: () => this.syncSingleStory(storyId)
-      });
+    if (isAuthenticated()) {
+      buttons.push(
+        {
+          text: 'Sync Story',
+          icon: 'sync-outline',
+          handler: () => this.syncSingleStory(storyId)
+        },
+        {
+          text: 'Share',
+          icon: 'share-outline',
+          handler: () => this.shareLink(storyId)
+        });
     }
 
     buttons.push(
@@ -425,6 +431,97 @@ class PageHome extends HTMLElement {
     await actionSheet.present();
   }
 
+  async shareLink(storyId) {
+    try {
+      // Find the story
+      const story = this.stories.find(s => s.id === storyId);
+      if (!story) {
+        this.showToast('Story not found');
+        return;
+      }
+
+      // Get the username
+      const username = getUsername();
+      if (!username) {
+        this.showToast('Please sign in to share stories');
+        return;
+      }
+
+      // Construct the share URL using the view route format
+      const shareUrl = `https://gnimble.online/view/${encodeURIComponent(username)}/${encodeURIComponent(story.title)}`;
+
+      // Copy to clipboard
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          // Modern clipboard API
+          await navigator.clipboard.writeText(shareUrl);
+          this.showToast('Share link copied to clipboard!');
+        } else {
+          // Fallback for older browsers
+          const textArea = document.createElement('textarea');
+          textArea.value = shareUrl;
+          textArea.style.position = 'fixed';
+          textArea.style.opacity = '0';
+          document.body.appendChild(textArea);
+          textArea.focus();
+          textArea.select();
+
+          const successful = document.execCommand('copy');
+          document.body.removeChild(textArea);
+
+          if (successful) {
+            this.showToast('Share link copied to clipboard!');
+          } else {
+            throw new Error('Copy command failed');
+          }
+        }
+      } catch (clipboardError) {
+        console.error('Error copying to clipboard:', clipboardError);
+
+        // Show the URL in a modal if clipboard fails
+        const alert = document.createElement('ion-alert');
+        alert.header = 'Share Link';
+        alert.message = `Copy this link to share your story:`;
+        alert.inputs = [
+          {
+            name: 'shareUrl',
+            type: 'text',
+            value: shareUrl,
+            attributes: {
+              readonly: true
+            }
+          }
+        ];
+        alert.buttons = [
+          {
+            text: 'Close',
+            role: 'cancel'
+          },
+          {
+            text: 'Copy',
+            handler: (data) => {
+              // Try copying again
+              if (navigator.clipboard) {
+                navigator.clipboard.writeText(shareUrl).then(() => {
+                  this.showToast('Share link copied to clipboard!');
+                }).catch(() => {
+                  this.showToast('Unable to copy automatically. Please copy the link manually.');
+                });
+              }
+            }
+          }
+        ];
+
+        document.body.appendChild(alert);
+        await alert.present();
+      }
+
+    } catch (error) {
+      console.error('Error creating share link:', error);
+      this.showToast('Error creating share link. Please try again.');
+    }
+  }
+
   async syncSingleStory(storyId) {
     try {
       // Update UI to show syncing
@@ -436,11 +533,11 @@ class PageHome extends HTMLElement {
 
       // Check cloud version first
       const cloudData = await loadStoryFromCloud(story.title);
-      
+
       if (cloudData && cloudData.lastModified !== undefined) {
         const cloudTime = new Date(cloudData.lastModified).getTime();
         const localTime = new Date(story.lastModified).getTime();
-        
+
         if (localTime > cloudTime) {
           // Local is newer - upload to cloud
           await syncStoryToCloud(storyId);
@@ -493,21 +590,21 @@ class PageHome extends HTMLElement {
     addBtn.addEventListener('click', () => this.showCreateStoryModal());
     profileBtn.addEventListener('click', () => this.navigateToLogin());
     settingsBtn.addEventListener('click', () => this.navigateToSettings());
-    
+
     // Cloud sync button (if authenticated)
     if (cloudSyncBtn) {
       cloudSyncBtn.addEventListener('click', async () => {
         await this.manualCloudSync();
       });
     }
-    
+
     // Add pull-to-refresh functionality
     const content = this.querySelector('ion-content');
     if (content) {
       const refresher = document.createElement('ion-refresher');
       refresher.slot = 'fixed';
       refresher.innerHTML = '<ion-refresher-content></ion-refresher-content>';
-      
+
       refresher.addEventListener('ionRefresh', async (event) => {
         if (isAuthenticated()) {
           await this.syncCloudStories(true); // Manual refresh
@@ -516,7 +613,7 @@ class PageHome extends HTMLElement {
         await this.checkSyncStatuses();
         event.detail.complete();
       });
-      
+
       content.appendChild(refresher);
     }
   }

@@ -70,7 +70,7 @@ const clearAuthData = () => {
   localStorage.removeItem('gnimble-user-data');
 };
 
-const makeApiCall = async (endpoint, data, requireAuth = false) => {
+const makeApiCall = async (endpoint, data, requireAuth = false, method = 'POST') => {
   const headers = {
     'Content-Type': 'application/json',
   };
@@ -84,7 +84,7 @@ const makeApiCall = async (endpoint, data, requireAuth = false) => {
   }
 
   const response = await fetch(`https://gnimble.online${endpoint}`, {
-    method: 'POST',
+    method: method,
     headers,
     body: JSON.stringify(data),
   });
@@ -132,14 +132,20 @@ const loadStoryFromCloud = async (storyName) => {
   }
 
   try {
-    const response = await makeApiCall('/api/story/get/', {
+    const username = getUsername();
+    if (!username) {
+      throw new Error('No username found');
+    }
+
+    // Use new user/story URL format
+    const response = await makeApiCall(`/api/story/get/${encodeURIComponent(username)}/${encodeURIComponent(storyName)}`, {
       story: storyName
     }, true); // requireAuth = true
 
     if (response.success === 1) {
       return response.data;
     } else {
-      throw new Error('Failed to load story from cloud');
+      throw new Error(response.message || 'Failed to load story from cloud');
     }
   } catch (error) {
     console.error('Error loading story from cloud:', error);
@@ -154,7 +160,13 @@ const saveStoryToCloud = async (storyName, data) => {
   }
 
   try {
-    const response = await makeApiCall('/api/story/set/', {
+    const username = getUsername();
+    if (!username) {
+      throw new Error('No username found');
+    }
+
+    // Use new user/story URL format
+    const response = await makeApiCall(`/api/story/set/${encodeURIComponent(username)}/${encodeURIComponent(storyName)}`, {
       story: storyName,
       data: data
     }, true); // requireAuth = true
@@ -163,10 +175,65 @@ const saveStoryToCloud = async (storyName, data) => {
       console.log(`Story "${storyName}" saved to cloud successfully`);
       return true;
     } else {
-      throw new Error('Failed to save story to cloud');
+      throw new Error(response.message || 'Failed to save story to cloud');
     }
   } catch (error) {
     console.error('Error saving story to cloud:', error);
+    throw error;
+  }
+};
+
+// Delete story from cloud
+const deleteStoryFromCloud = async (storyName) => {
+  if (!isAuthenticated()) {
+    throw new Error('Authentication required for cloud operations');
+  }
+
+  try {
+    const username = getUsername();
+    if (!username) {
+      throw new Error('No username found');
+    }
+
+    // Use new user/story URL format
+    const response = await makeApiCall(`/api/story/delete/${encodeURIComponent(username)}/${encodeURIComponent(storyName)}`, {
+      story: storyName
+    }, true); // requireAuth = true
+
+    if (response.success === 1) {
+      console.log(`Story "${storyName}" deleted from cloud successfully`);
+      return true;
+    } else {
+      throw new Error(response.message || 'Failed to delete story from cloud');
+    }
+  } catch (error) {
+    console.error('Error deleting story from cloud:', error);
+    throw error;
+  }
+};
+
+// List all stories from cloud
+const listStoriesFromCloud = async () => {
+  if (!isAuthenticated()) {
+    throw new Error('Authentication required for cloud operations');
+  }
+
+  try {
+    const username = getUsername();
+    if (!username) {
+      throw new Error('No username found');
+    }
+
+    // Use new user-specific URL format
+    const response = await makeApiCall(`/api/stories/list/${encodeURIComponent(username)}`, {}, true);
+
+    if (response.success === 1) {
+      return response.stories || [];
+    } else {
+      throw new Error(response.message || 'Failed to list stories from cloud');
+    }
+  } catch (error) {
+    console.error('Error listing stories from cloud:', error);
     throw error;
   }
 };
@@ -222,7 +289,7 @@ const syncStoryFromCloud = async (storyName) => {
       existingStory.created = cloudStoryData.created || existingStory.created;
 
       await saveStoriesIndex(stories);
-      await writeStoryFile(existingStory.id, cloudStoryData.content || '<p><br /></p>');
+      await writeStoryFile(existingStory.id, cloudStoryData.content || '<p><br /></p>', { skipCloudSync: true });
 
       return existingStory;
     } else {
@@ -238,7 +305,7 @@ const syncStoryFromCloud = async (storyName) => {
 
       stories.push(newStory);
       await saveStoriesIndex(stories);
-      await writeStoryFile(newStory.id, cloudStoryData.content || '<p><br /></p>');
+      await writeStoryFile(newStory.id, cloudStoryData.content || '<p><br /></p>', { skipCloudSync: true });
 
       return newStory;
     }
@@ -279,22 +346,38 @@ const syncAllStoriesToCloud = async () => {
   return results;
 };
 
-// Enhanced writeStoryFile that also syncs to cloud
-const writeStoryFileWithSync = async (storyId, content) => {
-  // First, write locally
-  const result = await writeStoryFile(storyId, content);
-
-  // Then try to sync to cloud if authenticated
-  if (isAuthenticated()) {
-    try {
-      await syncStoryToCloud(storyId);
-    } catch (error) {
-      console.warn('Failed to sync story to cloud, but local save was successful:', error);
-      // Don't throw error - local save was successful
-    }
+// Sync all cloud stories to local
+const syncAllStoriesFromCloud = async () => {
+  if (!isAuthenticated()) {
+    throw new Error('Authentication required for cloud operations');
   }
 
-  return result;
+  try {
+    const cloudStories = await listStoriesFromCloud();
+    const results = {
+      success: 0,
+      synced: 0,
+      errors: []
+    };
+
+    for (const cloudStory of cloudStories) {
+      try {
+        await syncStoryFromCloud(cloudStory.name);
+        results.synced++;
+      } catch (error) {
+        results.errors.push({
+          storyName: cloudStory.name,
+          error: error.message
+        });
+      }
+    }
+
+    results.success = results.errors.length === 0 ? 1 : 0;
+    return results;
+  } catch (error) {
+    console.error('Error syncing all stories from cloud:', error);
+    throw error;
+  }
 };
 
 // Load stories index
@@ -349,7 +432,7 @@ const createStory = async (title) => {
   return newStory;
 };
 
-// Delete a story
+// Delete a story (both local and cloud)
 const deleteStory = async (storyId) => {
   const stories = await loadStoriesIndex();
   const storyIndex = stories.findIndex(s => s.id === storyId);
@@ -358,7 +441,17 @@ const deleteStory = async (storyId) => {
 
   const story = stories[storyIndex];
 
-  // Delete the story file
+  // Delete from cloud first if authenticated
+  if (isAuthenticated()) {
+    try {
+      await deleteStoryFromCloud(story.title);
+    } catch (error) {
+      console.warn('Failed to delete story from cloud:', error);
+      // Continue with local deletion even if cloud deletion fails
+    }
+  }
+
+  // Delete the local story file
   try {
     await Filesystem.deleteFile({
       path: `stories/${story.filename}`,
@@ -380,10 +473,41 @@ const renameStory = async (storyId, newTitle) => {
 
   if (!story) throw new Error('Story not found');
 
+  const oldTitle = story.title;
   story.title = newTitle.trim();
   story.lastModified = Date.now();
 
   await saveStoriesIndex(stories);
+
+  // If authenticated, update the cloud version
+  if (isAuthenticated()) {
+    try {
+      // Get current content
+      const content = await readStoryFile(storyId);
+      const storyData = {
+        title: story.title,
+        content: content,
+        wordCount: story.wordCount,
+        lastModified: story.lastModified,
+        created: story.created
+      };
+
+      // Save with new title
+      await saveStoryToCloud(story.title, storyData);
+
+      // Delete old title if different
+      if (oldTitle !== newTitle) {
+        try {
+          await deleteStoryFromCloud(oldTitle);
+        } catch (error) {
+          console.warn('Failed to delete old story title from cloud:', error);
+        }
+      }
+    } catch (error) {
+      console.warn('Failed to update story title in cloud:', error);
+    }
+  }
+
   return story;
 };
 
@@ -477,6 +601,24 @@ const readStoryFile = async (storyId) => {
   }
 };
 
+// Enhanced writeStoryFileWithSync that also syncs to cloud
+const writeStoryFileWithSync = async (storyId, content) => {
+  // First, write locally
+  const result = await writeStoryFile(storyId, content);
+
+  // Then try to sync to cloud if authenticated
+  if (isAuthenticated()) {
+    try {
+      await syncStoryToCloud(storyId);
+    } catch (error) {
+      console.warn('Failed to sync story to cloud, but local save was successful:', error);
+      // Don't throw error - local save was successful
+    }
+  }
+
+  return result;
+};
+
 // Export all functions and variables for use in other modules
 export {
   currentStoryId,
@@ -506,9 +648,12 @@ export {
   // Cloud synchronization functions
   loadStoryFromCloud,
   saveStoryToCloud,
+  deleteStoryFromCloud,
+  listStoriesFromCloud,
   syncStoryToCloud,
   syncStoryFromCloud,
   syncAllStoriesToCloud,
+  syncAllStoriesFromCloud,
   writeStoryFileWithSync
 };
 

@@ -104,7 +104,6 @@
         }
     }
 
-    // Function to apply dark mode immediately
     function applyDarkMode() {
         try {
             const savedDarkMode = localStorage.getItem('gnimble-dark-mode');
@@ -127,7 +126,6 @@
     function applyTheme() {
         applyColors();
         applyWallpaper();
-        applyDarkMode();
     }
 
     // Enhanced theme application with retries
