@@ -47,6 +47,17 @@ const isAuthenticated = () => {
   return token && username;
 };
 
+// NEW: Check if user has active membership
+const hasActiveMembership = () => {
+  const userData = getUserData();
+  return userData && userData.activeMembership === true;
+};
+
+// NEW: Check if user can sync (authenticated AND has active membership)
+const canSync = () => {
+  return isAuthenticated() && hasActiveMembership();
+};
+
 const getAuthToken = () => {
   return localStorage.getItem('gnimble-auth-token');
 };
@@ -127,8 +138,8 @@ const checkAuth = () => {
 
 // Cloud story synchronization functions
 const loadStoryFromCloud = async (storyName) => {
-  if (!isAuthenticated()) {
-    throw new Error('Authentication required for cloud operations');
+  if (!canSync()) {
+    throw new Error('Active membership required for cloud operations');
   }
 
   try {
@@ -154,8 +165,8 @@ const loadStoryFromCloud = async (storyName) => {
 };
 
 const saveStoryToCloud = async (storyName, data) => {
-  if (!isAuthenticated()) {
-    console.log('Not authenticated, skipping cloud save');
+  if (!canSync()) {
+    console.log('Active membership required for cloud sync, skipping cloud save');
     return false;
   }
 
@@ -185,8 +196,8 @@ const saveStoryToCloud = async (storyName, data) => {
 
 // Delete story from cloud
 const deleteStoryFromCloud = async (storyName) => {
-  if (!isAuthenticated()) {
-    throw new Error('Authentication required for cloud operations');
+  if (!canSync()) {
+    throw new Error('Active membership required for cloud operations');
   }
 
   try {
@@ -214,8 +225,8 @@ const deleteStoryFromCloud = async (storyName) => {
 
 // List all stories from cloud
 const listStoriesFromCloud = async () => {
-  if (!isAuthenticated()) {
-    throw new Error('Authentication required for cloud operations');
+  if (!canSync()) {
+    throw new Error('Active membership required for cloud operations');
   }
 
   try {
@@ -240,8 +251,8 @@ const listStoriesFromCloud = async () => {
 
 // Sync a local story to the cloud
 const syncStoryToCloud = async (storyId) => {
-  if (!isAuthenticated()) {
-    console.log('Not authenticated, skipping cloud sync');
+  if (!canSync()) {
+    console.log('Active membership required for cloud sync, skipping');
     return false;
   }
 
@@ -270,8 +281,8 @@ const syncStoryToCloud = async (storyId) => {
 
 // Import a story from the cloud to local storage
 const syncStoryFromCloud = async (storyName) => {
-  if (!isAuthenticated()) {
-    throw new Error('Authentication required for cloud operations');
+  if (!canSync()) {
+    throw new Error('Active membership required for cloud operations');
   }
 
   try {
@@ -317,8 +328,8 @@ const syncStoryFromCloud = async (storyName) => {
 
 // Sync all local stories to cloud
 const syncAllStoriesToCloud = async () => {
-  if (!isAuthenticated()) {
-    console.log('Not authenticated, skipping cloud sync');
+  if (!canSync()) {
+    console.log('Active membership required for cloud sync, skipping');
     return { success: 0, synced: 0, errors: [] };
   }
 
@@ -348,8 +359,8 @@ const syncAllStoriesToCloud = async () => {
 
 // Sync all cloud stories to local
 const syncAllStoriesFromCloud = async () => {
-  if (!isAuthenticated()) {
-    throw new Error('Authentication required for cloud operations');
+  if (!canSync()) {
+    throw new Error('Active membership required for cloud operations');
   }
 
   try {
@@ -410,7 +421,7 @@ const saveStoriesIndex = async (stories) => {
   }
 };
 
-// Enhanced createStory that also creates in cloud when authenticated
+// Enhanced createStory that also creates in cloud when authenticated and has membership
 const createStory = async (title) => {
   const stories = await loadStoriesIndex();
   const newStory = {
@@ -426,7 +437,7 @@ const createStory = async (title) => {
   stories.push(newStory);
   await saveStoriesIndex(stories);
 
-  // Create empty story file (this will auto-sync to cloud if authenticated)
+  // Create empty story file (this will auto-sync to cloud if user can sync)
   await writeStoryFile(newStory.id, '<p><br /></p>');
 
   return newStory;
@@ -441,8 +452,8 @@ const deleteStory = async (storyId) => {
 
   const story = stories[storyIndex];
 
-  // Delete from cloud first if authenticated
-  if (isAuthenticated()) {
+  // Delete from cloud first if user can sync
+  if (canSync()) {
     try {
       await deleteStoryFromCloud(story.title);
     } catch (error) {
@@ -479,8 +490,8 @@ const renameStory = async (storyId, newTitle) => {
 
   await saveStoriesIndex(stories);
 
-  // If authenticated, update the cloud version
-  if (isAuthenticated()) {
+  // If user can sync, update the cloud version
+  if (canSync()) {
     try {
       // Get current content
       const content = await readStoryFile(storyId);
@@ -535,7 +546,7 @@ const updateStoryMetadata = async (storyId, content) => {
   return story;
 };
 
-// Enhanced writeStoryFile that automatically syncs to cloud when authenticated
+// Enhanced writeStoryFile that automatically syncs to cloud when user can sync
 const writeStoryFile = async (storyId, content, options = {}) => {
   const story = await getStory(storyId);
   if (!story) throw new Error('Story not found');
@@ -555,8 +566,8 @@ const writeStoryFile = async (storyId, content, options = {}) => {
     // Step 2: Update metadata locally
     await updateStoryMetadata(storyId, content);
 
-    // Step 3: Sync to cloud if authenticated and not skipped
-    if (isAuthenticated() && !skipCloudSync) {
+    // Step 3: Sync to cloud if user can sync and not skipped
+    if (canSync() && !skipCloudSync) {
       try {
         console.log(`Syncing story "${story.title}" to cloud...`);
 
@@ -606,8 +617,8 @@ const writeStoryFileWithSync = async (storyId, content) => {
   // First, write locally
   const result = await writeStoryFile(storyId, content);
 
-  // Then try to sync to cloud if authenticated
-  if (isAuthenticated()) {
+  // Then try to sync to cloud if user can sync
+  if (canSync()) {
     try {
       await syncStoryToCloud(storyId);
     } catch (error) {
@@ -636,6 +647,8 @@ export {
   readStoryFile,
   // Authentication functions
   isAuthenticated,
+  hasActiveMembership, // NEW
+  canSync, // NEW
   getAuthToken,
   getUsername,
   getUserData,
@@ -659,8 +672,8 @@ export {
 
 // Optional: Add a function to manually trigger cloud sync for a story
 const manualSyncToCloud = async (storyId) => {
-  if (!isAuthenticated()) {
-    throw new Error('Authentication required for cloud sync');
+  if (!canSync()) {
+    throw new Error('Active membership required for cloud sync');
   }
 
   try {
@@ -700,7 +713,7 @@ const syncStatusTracker = {
   },
 
   async syncPending() {
-    if (!isAuthenticated()) return;
+    if (!canSync()) return;
 
     const pending = this.getPendingSyncs();
     const results = [];

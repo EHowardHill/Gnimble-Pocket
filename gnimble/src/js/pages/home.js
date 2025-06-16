@@ -1,3 +1,5 @@
+// home.js
+
 import {
   loadStoriesIndex,
   createStory,
@@ -5,11 +7,11 @@ import {
   renameStory,
   formatDate,
   isAuthenticated,
+  canSync,
   getUsername,
   loadStoryFromCloud,
   syncStoryToCloud,
   syncStoryFromCloud,
-  readStoryFile,
   makeApiCall
 } from '../shared.js';
 
@@ -23,6 +25,7 @@ class PageHome extends HTMLElement {
 
   async connectedCallback() {
     const isUserAuthenticated = isAuthenticated();
+    const userCanSync = canSync();
 
     this.innerHTML = `
       <ion-page>
@@ -33,7 +36,7 @@ class PageHome extends HTMLElement {
             </ion-title>
             <ion-buttons slot="end">
               ${isUserAuthenticated ? `
-                <ion-button fill="clear" id="cloud-sync-btn" title="Sync All Stories">
+                <ion-button fill="clear" id="cloud-sync-btn" title="Sync All Stories" ${!userCanSync ? 'disabled' : ''}>
                   <ion-icon name="sync-outline"></ion-icon>
                 </ion-button>
               ` : ''}
@@ -54,6 +57,17 @@ class PageHome extends HTMLElement {
         </ion-header>
 
         <ion-content class="wallpaper ion-padding">
+          ${!userCanSync && isUserAuthenticated ? `
+            <ion-card color="warning" style="margin-bottom: 16px;">
+              <ion-card-content>
+                <ion-text>
+                  <h4>Upgrade to sync your stories</h4>
+                  <p>Get a premium membership to sync your stories across devices and access them anywhere.</p>
+                </ion-text>
+              </ion-card-content>
+            </ion-card>
+          ` : ''}
+          
           <div class="wallpaper wallpaper-override" id="stories-container">
             <ion-text color="medium" class="ion-text-center">
               <p>Loading stories...</p>
@@ -97,6 +111,10 @@ class PageHome extends HTMLElement {
           color: var(--ion-color-medium);
         }
         
+        .sync-status-icon.membership-required {
+          color: var(--ion-color-warning);
+        }
+        
         .sync-status-icon.syncing {
           color: var(--ion-color-primary);
           animation: pulse 1.5s ease-in-out infinite;
@@ -118,21 +136,128 @@ class PageHome extends HTMLElement {
 
     this.setupEventListeners();
 
-    // First sync cloud stories if authenticated
-    if (isUserAuthenticated) {
+    // First sync cloud stories if user can sync
+    if (userCanSync) {
       await this.syncCloudStories();
     }
 
     await this.loadStories();
-    await this.checkSyncStatuses();
+
+    // NEW: Auto-sync all stories if user can sync
+    if (userCanSync) {
+      await this.syncAllStories();
+    } else {
+      // Just check sync statuses for status indication
+      await this.checkSyncStatuses();
+    }
 
     // Load saved primary color if it exists
     this.loadSavedPrimaryColor();
   }
 
+  // NEW METHOD: Sync all stories automatically
+  async syncAllStories() {
+    if (!canSync() || this.stories.length === 0) {
+      return;
+    }
+
+    const progressIndicator = this.querySelector('#cloud-sync-progress');
+    let syncedCount = 0;
+    let errorCount = 0;
+
+    try {
+      // Show progress indicator
+      if (progressIndicator) {
+        progressIndicator.style.display = 'block';
+      }
+
+      // Sync each story
+      const syncPromises = this.stories.map(async (story) => {
+        try {
+          // Mark as syncing
+          this.syncStatuses.set(story.id, 'syncing');
+          this.updateStorySyncIcon(story.id, 'syncing');
+
+          // Check cloud version first
+          const cloudData = await loadStoryFromCloud(story.title);
+
+          if (cloudData && cloudData.lastModified !== undefined) {
+            const cloudTime = new Date(cloudData.lastModified).getTime();
+            const localTime = new Date(story.lastModified).getTime();
+
+            if (localTime > cloudTime) {
+              // Local is newer - upload to cloud
+              await syncStoryToCloud(story.id);
+              console.log(`Uploaded "${story.title}" to cloud`);
+            } else if (cloudTime > localTime) {
+              // Cloud is newer - download from cloud
+              await syncStoryFromCloud(story.title);
+              console.log(`Downloaded "${story.title}" from cloud`);
+              // Reload this specific story data
+              const updatedStories = await loadStoriesIndex();
+              const updatedStory = updatedStories.find(s => s.id === story.id);
+              if (updatedStory) {
+                // Update the story in our local array
+                const storyIndex = this.stories.findIndex(s => s.id === story.id);
+                if (storyIndex !== -1) {
+                  this.stories[storyIndex] = updatedStory;
+                }
+              }
+            }
+            // If timestamps are equal, story is already in sync
+          } else {
+            // Not in cloud yet - upload it
+            await syncStoryToCloud(story.id);
+            console.log(`Uploaded new story "${story.title}" to cloud`);
+          }
+
+          // Mark as synced
+          this.syncStatuses.set(story.id, 'synced');
+          this.updateStorySyncIcon(story.id, 'synced');
+          syncedCount++;
+
+        } catch (error) {
+          console.error(`Error syncing story "${story.title}":`, error);
+          this.syncStatuses.set(story.id, 'error');
+          this.updateStorySyncIcon(story.id, 'error');
+          errorCount++;
+        }
+      });
+
+      await Promise.all(syncPromises);
+
+      // Re-render stories to reflect any updates
+      this.renderStories();
+
+      // Show summary toast only if there were actual sync operations
+      if (syncedCount > 0 || errorCount > 0) {
+        let message = '';
+        if (syncedCount > 0 && errorCount === 0) {
+          message = syncedCount === 1 ? 'Synced 1 story' : `Synced ${syncedCount} stories`;
+        } else if (syncedCount > 0 && errorCount > 0) {
+          message = `Synced ${syncedCount} stories, ${errorCount} errors`;
+        } else if (errorCount > 0) {
+          message = errorCount === 1 ? 'Error syncing 1 story' : `Error syncing ${errorCount} stories`;
+        }
+        if (message) {
+          this.showToast(message);
+        }
+      }
+
+    } catch (error) {
+      console.error('Error during auto-sync:', error);
+      this.showToast('Error syncing stories');
+    } finally {
+      // Hide progress indicator
+      if (progressIndicator) {
+        progressIndicator.style.display = 'none';
+      }
+    }
+  }
+
   // Get list of all stories from cloud
   async getCloudStories() {
-    if (!isAuthenticated()) {
+    if (!canSync()) {
       return [];
     }
 
@@ -171,7 +296,7 @@ class PageHome extends HTMLElement {
 
   // Sync stories from cloud to local
   async syncCloudStories() {
-    if (!isAuthenticated()) {
+    if (!canSync()) {
       return;
     }
 
@@ -236,6 +361,15 @@ class PageHome extends HTMLElement {
       // If not authenticated, all stories are "offline"
       this.stories.forEach(story => {
         this.syncStatuses.set(story.id, 'offline');
+      });
+      this.renderStories();
+      return;
+    }
+
+    if (!canSync()) {
+      // If authenticated but no active membership, show membership required
+      this.stories.forEach(story => {
+        this.syncStatuses.set(story.id, 'membership-required');
       });
       this.renderStories();
       return;
@@ -319,6 +453,12 @@ class PageHome extends HTMLElement {
           className: 'error',
           title: 'Sync error'
         };
+      case 'membership-required':
+        return {
+          icon: 'lock-closed-outline',
+          className: 'membership-required',
+          title: 'Premium membership required for cloud sync'
+        };
       case 'offline':
       default:
         return {
@@ -394,19 +534,22 @@ class PageHome extends HTMLElement {
       }
     ];
 
-    // Add sync option if authenticated and not synced
+    // Add sync option if user can sync
+    if (canSync()) {
+      buttons.push({
+        text: 'Sync Story',
+        icon: 'sync-outline',
+        handler: () => this.syncSingleStory(storyId)
+      });
+    }
+
+    // Add share option if authenticated (sharing might not require membership)
     if (isAuthenticated()) {
-      buttons.push(
-        {
-          text: 'Sync Story',
-          icon: 'sync-outline',
-          handler: () => this.syncSingleStory(storyId)
-        },
-        {
-          text: 'Share',
-          icon: 'share-outline',
-          handler: () => this.shareLink(storyId)
-        });
+      buttons.push({
+        text: 'Share',
+        icon: 'share-outline',
+        handler: () => this.shareLink(storyId)
+      });
     }
 
     buttons.push(
@@ -524,6 +667,12 @@ class PageHome extends HTMLElement {
 
   async syncSingleStory(storyId) {
     try {
+      // Check if user can sync
+      if (!canSync()) {
+        this.showToast('Premium membership required for cloud sync');
+        return;
+      }
+
       // Update UI to show syncing
       this.syncStatuses.set(storyId, 'syncing');
       this.updateStorySyncIcon(storyId, 'syncing');
@@ -565,7 +714,13 @@ class PageHome extends HTMLElement {
       console.error('Error syncing story:', error);
       this.syncStatuses.set(storyId, 'error');
       this.updateStorySyncIcon(storyId, 'error');
-      this.showToast('Error syncing story. Please try again.');
+
+      // Check if error is related to membership
+      if (error.message.includes('membership') || error.message.includes('Active membership')) {
+        this.showToast('Premium membership required for cloud sync');
+      } else {
+        this.showToast('Error syncing story. Please try again.');
+      }
     }
   }
 
@@ -591,9 +746,13 @@ class PageHome extends HTMLElement {
     profileBtn.addEventListener('click', () => this.navigateToLogin());
     settingsBtn.addEventListener('click', () => this.navigateToSettings());
 
-    // Cloud sync button (if authenticated)
+    // Cloud sync button (if authenticated and can sync)
     if (cloudSyncBtn) {
       cloudSyncBtn.addEventListener('click', async () => {
+        if (!canSync()) {
+          this.showToast('Premium membership required for cloud sync');
+          return;
+        }
         await this.manualCloudSync();
       });
     }
@@ -606,11 +765,11 @@ class PageHome extends HTMLElement {
       refresher.innerHTML = '<ion-refresher-content></ion-refresher-content>';
 
       refresher.addEventListener('ionRefresh', async (event) => {
-        if (isAuthenticated()) {
+        if (canSync()) {
           await this.syncCloudStories(true); // Manual refresh
+          await this.syncAllStories(); // Also sync all stories on manual refresh
         }
         await this.loadStories();
-        await this.checkSyncStatuses();
         event.detail.complete();
       });
 
@@ -619,10 +778,15 @@ class PageHome extends HTMLElement {
   }
 
   async manualCloudSync() {
-    this.showToast('Checking for cloud stories...');
+    if (!canSync()) {
+      this.showToast('Premium membership required for cloud sync');
+      return;
+    }
+
+    this.showToast('Syncing all stories...');
     await this.syncCloudStories();
     await this.loadStories();
-    await this.checkSyncStatuses();
+    await this.syncAllStories(); // Use the new auto-sync method
   }
 
   navigateToLogin() {
@@ -755,7 +919,15 @@ class PageHome extends HTMLElement {
         try {
           await createStory(title);
           await this.loadStories();
-          await this.checkSyncStatuses(); // Check sync status after creating
+          // Auto-sync the new story if user can sync
+          if (canSync()) {
+            const newStory = this.stories.find(s => s.title === title);
+            if (newStory) {
+              await this.syncSingleStory(newStory.id);
+            }
+          } else {
+            await this.checkSyncStatuses(); // Check sync status after creating
+          }
           await modal.dismiss();
           this.showToast('Story created successfully!');
         } catch (error) {
